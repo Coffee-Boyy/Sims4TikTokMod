@@ -1,0 +1,27 @@
+{
+  "name": "sims4-tiktok-bridge",
+  "version": "1.0.0",
+  "description": "TikTok Live Bridge Service for Sims 4 Mod using Node.js",
+  "main": "bridge.js",
+  "scripts": {
+    "start": "node bridge.js",
+    "dev": "node bridge.js --verbose",
+    "test": "node test-client.js"
+  },
+  "keywords": [
+    "tiktok",
+    "live",
+    "bridge",
+    "sims4",
+    "websocket"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "tiktok-live-connector": "^2.0.7-beta1",
+    "ws": "^8.14.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

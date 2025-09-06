@@ -1,0 +1,20 @@
+{
+  "tiktokUsername": "shirleycoelloc",
+  "websocketPort": 8765,
+  "websocketHost": "localhost",
+  "rateLimiting": {
+    "minEventInterval": 2000,
+    "maxEventsPerMinute": 10
+  },
+  "logging": {
+    "verbose": false
+  },
+  "giftMappings": {
+    "rose": "Add §500 to household funds",
+    "heart": "Apply Happy buff for 4 hours",
+    "gg": "Break random household object",
+    "diamond": "Add §1000 to household funds",
+    "rocket": "Set house on fire",
+    "lion": "Spawn random celebrity"
+  }
+}

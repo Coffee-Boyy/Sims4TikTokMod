@@ -1,73 +1,252 @@
-# TikTok Bridge Service
+# 🎮 Sims 4 TikTok Bridge Service (Node.js)
 
-This service connects to TikTok Live streams and forwards gift events to the Sims 4 mod via WebSocket.
+A Node.js bridge service that connects to TikTok Live streams and forwards gift events to your Sims 4 mod via WebSocket.
 
-## Setup
+## ✨ Features
 
-1. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+- 🎁 **Real-time Gift Detection** - Captures TikTok gifts and forwards them to your Sims 4 mod
+- 🌐 **WebSocket Server** - Provides real-time communication with your Sims 4 mod
+- ⏱️ **Rate Limiting** - Prevents spam and ensures smooth gameplay
+- 🔍 **Verbose Logging** - Optional detailed logging for debugging
+- 🛡️ **Error Handling** - Comprehensive error handling with helpful debugging tips
+- ⚙️ **Configurable** - Easy configuration via JSON file or command line
 
-2. **Configure TikTok Username**:
-   Edit `config.py` and set your TikTok username:
-   ```python
-   TIKTOK_USERNAME = "your_actual_username"
-   ```
+## 📋 Requirements
 
-## Usage
+- **Node.js** 14.0.0 or higher
+- **npm** (comes with Node.js)
+- **Internet connection**
+- **TikTok user must be actively live streaming**
 
-### Start the Bridge Service
+## 🚀 Quick Start
+
+### 1. Install Dependencies
 
 ```bash
-python tiktok_bridge.py --username your_tiktok_username
+cd bridge_service
+npm install
 ```
 
-Or use the config file:
-```bash
-python tiktok_bridge.py --username $(python -c "from config import TIKTOK_USERNAME; print(TIKTOK_USERNAME)")
-```
+### 2. Configure Username
 
-### Test the Connection
+Edit `config.json` and set your desired TikTok username:
 
-In a separate terminal, run the test client:
-```bash
-python test_client.py
-```
-
-## How It Works
-
-1. **TikTok Live Connection**: Connects to your TikTok Live stream using the TikTokLive library
-2. **Event Processing**: Listens for gift events and normalizes them into JSON format
-3. **Rate Limiting**: Implements safety measures to prevent spam (max 10 events/minute, 2-second intervals)
-4. **WebSocket Broadcasting**: Sends events to all connected Sims 4 mod clients on localhost:8765
-
-## Event Format
-
-Events are sent in the following JSON format:
 ```json
 {
-    "user": "viewer_username",
-    "gift": "rose",
-    "value": 1,
-    "timestamp": "2024-01-15T10:30:45"
+  "tiktokUsername": "your_tiktok_username_here"
 }
 ```
 
-## Supported Gifts (MVP)
+### 3. Start the Bridge
 
-- **rose** → Add §500 to household funds
-- **heart** → Apply Happy buff for 4 hours  
-- **gg** → Break random household object
+```bash
+npm start
+```
 
-## Troubleshooting
+Or with custom username:
 
-- **Connection Refused**: Make sure the bridge service is running before starting the Sims 4 mod
-- **No Events**: Verify you're live on TikTok and receiving gifts
-- **Rate Limited**: The service automatically rate-limits events to prevent spam
+```bash
+node start.js --username shirleycoelloc
+```
 
-## Security
+### 4. Test the Connection
 
-- Only accepts connections from localhost
-- Implements rate limiting to prevent abuse
-- No external network access required for the Sims 4 mod
+In another terminal:
+
+```bash
+npm test
+```
+
+This will start a test client that simulates your Sims 4 mod connecting to the bridge.
+
+## 📖 Usage
+
+### Basic Usage
+
+```bash
+# Use username from config.json
+node start.js
+
+# Specify username
+node start.js --username popular_streamer
+
+# Custom port and verbose logging
+node start.js --username streamer --port 9000 --verbose
+```
+
+### Command Line Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--username` | TikTok username (without @) | From config.json |
+| `--port` | WebSocket port | 8765 |
+| `--verbose` | Enable detailed logging | false |
+| `--help` | Show help message | - |
+
+### Configuration File
+
+Edit `config.json` to customize settings:
+
+```json
+{
+  "tiktokUsername": "shirleycoelloc",
+  "websocketPort": 8765,
+  "websocketHost": "localhost",
+  "rateLimiting": {
+    "minEventInterval": 2000,
+    "maxEventsPerMinute": 10
+  },
+  "logging": {
+    "verbose": false
+  },
+  "giftMappings": {
+    "rose": "Add §500 to household funds",
+    "heart": "Apply Happy buff for 4 hours",
+    "gg": "Break random household object"
+  }
+}
+```
+
+## 📡 WebSocket API
+
+The bridge sends JSON messages to connected clients (your Sims 4 mod):
+
+### Connection Event
+```json
+{
+  "type": "connection",
+  "message": "Connected to TikTok Live bridge for @username",
+  "timestamp": "2024-01-01T12:00:00.000Z"
+}
+```
+
+### Gift Event
+```json
+{
+  "type": "gift",
+  "user": "tiktok_username",
+  "gift": "rose",
+  "value": 5,
+  "giftId": 5655,
+  "diamondCount": 1,
+  "timestamp": "2024-01-01T12:00:00.000Z"
+}
+```
+
+## 🧪 Testing
+
+### Test the Bridge Service
+
+1. **Start the bridge:**
+   ```bash
+   node start.js --username some_live_user --verbose
+   ```
+
+2. **In another terminal, start the test client:**
+   ```bash
+   node test-client.js
+   ```
+
+3. **The test client will:**
+   - Connect to the bridge WebSocket server
+   - Display any gift events received
+   - Show what Sims 4 actions would be triggered
+
+### Manual WebSocket Testing
+
+You can also test with any WebSocket client:
+
+```bash
+# Using wscat (install with: npm install -g wscat)
+wscat -c ws://localhost:8765
+```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**❌ "Failed to connect to TikTok Live"**
+- The TikTok user is not currently live streaming
+- The username doesn't exist
+- Network connectivity issues
+
+**❌ "WebSocket connection failed"**
+- Port 8765 is already in use
+- Firewall blocking the connection
+- Try a different port with `--port 9000`
+
+**❌ "No gift events received"**
+- The streamer is not receiving gifts
+- Rate limiting is active (wait a moment)
+- Enable `--verbose` to see all activity
+
+### Debug Mode
+
+Enable verbose logging to see detailed information:
+
+```bash
+node start.js --username streamer --verbose
+```
+
+This will show:
+- All TikTok events (chat, likes, follows)
+- WebSocket connection details
+- Rate limiting information
+- Detailed error messages
+
+### Finding Live Users
+
+The bridge only works with users who are **actively live streaming**. To find live users:
+
+1. Open TikTok in your web browser
+2. Search for "LIVE" content
+3. Find a user who is currently streaming
+4. Use their username (without the @) in the bridge
+
+## 📁 Project Structure
+
+```
+bridge_service/
+├── package.json          # Dependencies and scripts
+├── config.json          # Configuration settings
+├── bridge.js            # Main bridge service
+├── start.js             # Startup script with nice interface
+├── test-client.js       # Test client for debugging
+└── README.md           # This file
+```
+
+## 🔌 Integration with Sims 4
+
+Your Sims 4 mod should:
+
+1. **Connect** to `ws://localhost:8765`
+2. **Listen** for messages with `type: "gift"`
+3. **Process** the gift data to trigger in-game actions
+4. **Optionally** send responses back to the bridge
+
+Example WebSocket connection in your mod:
+```javascript
+// Pseudocode for Sims 4 mod
+const ws = new WebSocket('ws://localhost:8765');
+
+ws.on('message', (data) => {
+    const event = JSON.parse(data);
+    if (event.type === 'gift') {
+        triggerSimsAction(event.gift, event.user, event.value);
+    }
+});
+```
+
+## 🤝 Contributing
+
+Feel free to submit issues, feature requests, or pull requests!
+
+## 📄 License
+
+MIT License - feel free to use this in your projects!
+
+## 🙏 Acknowledgments
+
+- [TikTok-Live-Connector](https://github.com/zerodytrash/TikTok-Live-Connector) - The awesome library that makes this possible
+- The Sims 4 modding community
+- TikTok Live streamers who make this fun!
