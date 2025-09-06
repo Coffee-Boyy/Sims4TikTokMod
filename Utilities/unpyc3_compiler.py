@@ -1,4 +1,4 @@
-from compile_utils import _remove_files_conflicting_with_decompile, _replace_renamed_files
+from Utilities.compile_utils import _remove_files_conflicting_with_decompile, _replace_renamed_files
 
 _remove_files_conflicting_with_decompile(decompile_ea_scripts=False)
 
@@ -19,7 +19,7 @@ class Unpyc3PythonCompiler:
         output_ts4script_name: str,
         names_of_modules_to_exclude: str=None,
         mod_creator_name: str=None,
-        folder_path_to_gather_script_modules_from: str='..'
+        folder_path_to_gather_script_modules_from: str='./Scripts'
     ):
         """compile_mod(\
             names_of_modules_include,\
@@ -34,7 +34,7 @@ class Unpyc3PythonCompiler:
 
         """
         os.makedirs(folder_path_to_output_ts4script_to, exist_ok=True)
-        from compile_utils import _remove_files_conflicting_with_decompile, _replace_renamed_files
+        from Utilities.compile_utils import _remove_files_conflicting_with_decompile, _replace_renamed_files
         _remove_files_conflicting_with_decompile(decompile_ea_scripts=False)
         names_of_modules_include = tuple(names_of_modules_include)
         if not mod_creator_name:

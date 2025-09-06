@@ -8,11 +8,11 @@
       <sourceFolder url="file://$MODULE_DIR$/EA/simulation" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/EA/base" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Scripts" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/ScriptLibrary/S4CL" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Libraries/S4CL" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Utilities" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/Release" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="py37" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="TestRunnerService">

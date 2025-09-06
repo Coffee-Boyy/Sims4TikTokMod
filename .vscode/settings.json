@@ -1,0 +1,28 @@
+{
+    "python.analysis.extraPaths": [
+        "./Scripts",
+        "./Libraries/S4CL",
+        "./Utilities"
+    ],
+    "python.analysis.include": [
+        "./Scripts",
+        "./Libraries/S4CL",
+        "./Utilities"
+    ],
+    "python.analysis.packageIndexDepths": [
+        {
+            "name": "Libraries/S4CL",
+            "depth": 6
+        },
+        {
+            "name": "Scripts",
+            "depth": 4
+        },
+        {
+            "name": "Utilities",
+            "depth": 2
+        }
+    ],
+    "python.defaultInterpreterPath": "python3",
+    "python.terminal.activateEnvironment": true
+}

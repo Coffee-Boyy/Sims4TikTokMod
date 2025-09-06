@@ -1,11 +1,11 @@
 import os
-from decompilation_method import S4PyDecompilationMethod
+from Utilities.decompilation_method import S4PyDecompilationMethod
 
 # This name will be appended to the front of compiled script files.
 # Example:
 # If I set the value to "ColonolNutty"
 # compiling my scripts would output a file with the name "ColonolNutty_<script_name>.ts4script"
-creator_name = ''
+creator_name = 'SimsTikTokMod'
 
 # If you want to decompile the EA Python Scripts:
 # 1. Change should_decompile_ea_scripts to True
@@ -38,29 +38,10 @@ if should_decompile_ea_scripts:
     decompile_method_name = S4PyDecompilationMethod.UNPYC3
     should_decompile_custom_scripts = False
 
-# If this path is not correct, change it to your Mods folder location instead.
-if os.name != 'nt':
-    # Mac
-    mods_folder = os.path.join(os.environ['HOME'], 'Documents', 'Electronic Arts', 'The Sims 4', 'Mods')
-    print(f'Mods folder path: {mods_folder}')
-else:
-    # Windows
-    mods_folder = os.path.join(os.environ['USERPROFILE'], 'Documents', 'Electronic Arts', 'The Sims 4', 'Mods')
-    print(f'Mods folder path: {mods_folder}')
+mods_folder = "/home/connor/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/compatdata/1222670/pfx/drive_c/users/steamuser/Documents/Electronic Arts/The Sims 4/Mods"
+print(f'Mods folder path: {mods_folder}')
 
 # Location of the game's zipped binary scripts (base.zip, core.zip and simulation.zip)
 # If this path is not found properly when trying to decompile, change it to the location where you have installed The Sims 4 at, this would be the folder that contains the GameVersion.txt file
-if os.name != 'nt':
-    # Mac
-    game_folder = os.path.join(os.environ['HOME'], 'Applications', 'The Sims 4.app', 'Contents')
-    print(f'Game folder path: {game_folder}')
-else:
-    # noinspection PyBroadException
-    try:
-        # Windows
-        import winreg as winreg
-        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, 'SOFTWARE\\Maxis\\The Sims 4')
-        (game_folder, _) = winreg.QueryValueEx(key, 'Install Dir')
-        print(f'Game folder path: {game_folder}')
-    except:
-        raise Exception('The Sims 4 game folder was not found! Please specify one manually in settings.py.')
+game_folder = "/home/connor/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/The Sims 4"
+print(f'Game folder path: {game_folder}')

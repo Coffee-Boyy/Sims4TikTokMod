@@ -5,14 +5,11 @@
 .idea/inspectionProfiles
 
 # EA Scripts
-EA/base
-EA/core
-EA/generated
-EA/simulation
 EA/base.zip
 EA/core.zip
 EA/generated.zip
 EA/simulation.zip
+EA/**/key
 
 # Libraries
 Libraries/**/*

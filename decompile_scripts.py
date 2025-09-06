@@ -1,7 +1,7 @@
 import os
 
-from compile_utils import _remove_files_conflicting_with_decompile, _replace_renamed_files
-from decompilation_method import S4PyDecompilationMethod
+from Utilities.compile_utils import _remove_files_conflicting_with_decompile, _replace_renamed_files
+from Utilities.decompilation_method import S4PyDecompilationMethod
 from settings import custom_scripts_for_decompile_source, game_folder, decompile_method_name, custom_scripts_for_decompile_destination, should_decompile_ea_scripts, should_decompile_custom_scripts
 
 
@@ -33,7 +33,7 @@ def _decompile_using_unpyc3(decompile_ea_scripts: bool=False, decompile_custom_s
 def _decompile_using_py37dec() -> None:
     _remove_files_conflicting_with_decompile(decompile_ea_scripts=should_decompile_ea_scripts)
 
-    from py37_decompiler import Py37PythonDecompiler
+    from Utilities.py37_decompiler import Py37PythonDecompiler
     Py37PythonDecompiler().decompile(
         custom_scripts_for_decompile_source,
         custom_scripts_for_decompile_destination

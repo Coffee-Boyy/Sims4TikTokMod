@@ -9,17 +9,17 @@ class ModInfo(CommonModInfo):
     @property
     def _name(self) -> str:
         # This is the name that'll be used whenever a Messages.txt or Exceptions.txt file is created <_name>_Messages.txt and <_name>_Exceptions.txt.
-        return 'S4CLSampleMod'
+        return 'SimsTikTokMod'
 
     @property
     def _author(self) -> str:
         # This is your name.
-        return 'ColonolNutty'
+        return 'CoffeeBoy'
 
     @property
     def _base_namespace(self) -> str:
         # This is the name of the root package
-        return 's4cl_sample_mod_scripts'
+        return 'sims_tik_tok_mod'
 
     @property
     def _file_path(self) -> str:

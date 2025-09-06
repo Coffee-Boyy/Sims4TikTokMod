@@ -1,0 +1,102 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "s4cl-template-project"
+version = "1.0.0"
+description = "S4CL Template Project for Sims 4 Community Library development"
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = []
+dynamic = ["optional-dependencies"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["Scripts*", "Libraries*", "Utilities*"]
+exclude = ["Release*", "EA*", "custom_scripts_for_decompile*"]
+
+[tool.setuptools.package-dir]
+"" = "."
+
+[tool.black]
+line-length = 120
+target-version = ['py37']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | Release
+  | EA
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 120
+known_first_party = ["Scripts", "Libraries", "Utilities"]
+src_paths = ["Scripts", "Libraries/S4CL", "Utilities"]
+
+[tool.mypy]
+python_version = "3.7"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+mypy_path = "Scripts:Libraries/S4CL:Utilities"
+
+[[tool.mypy.overrides]]
+module = [
+    "Scripts.*",
+    "Libraries.*",
+    "Utilities.*"
+]
+ignore_missing_imports = false
+
+[tool.pylint]
+max-line-length = 120
+disable = [
+    "C0114",  # missing-module-docstring
+    "C0115",  # missing-class-docstring
+    "C0116",  # missing-function-docstring
+    "R0903",  # too-few-public-methods
+    "R0913",  # too-many-arguments
+]
+good-names = ["i", "j", "k", "ex", "Run", "_"]
+extension-pkg-whitelist = ["pyd"]
+reports = "y"
+score = "y"
+
+[tool.coverage.run]
+source = ["Scripts", "Libraries", "Utilities"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "Release/*",
+    "EA/*"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
