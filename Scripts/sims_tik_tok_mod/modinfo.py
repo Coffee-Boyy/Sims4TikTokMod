@@ -1,6 +1,5 @@
 from sims4communitylib.mod_support.common_mod_info import CommonModInfo
 
-
 class ModInfo(CommonModInfo):
     """ Mod info for the S4CL Sample Mod. """
     # To create a Mod Identity for this mod, simply do ModInfo.get_identity(). Please refrain from using the ModInfo of The Sims 4 Community Library in your own mod and instead use yours!
@@ -9,7 +8,7 @@ class ModInfo(CommonModInfo):
     @property
     def _name(self) -> str:
         # This is the name that'll be used whenever a Messages.txt or Exceptions.txt file is created <_name>_Messages.txt and <_name>_Exceptions.txt.
-        return 'SimsTikTokMod'
+        return f'SimsTikTokMod'
 
     @property
     def _author(self) -> str:

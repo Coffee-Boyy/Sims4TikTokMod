@@ -101,7 +101,7 @@ class TikTokBridgeService {
         
         this.wss = new WebSocketServer({ 
             port: this.websocketPort,
-            host: 'localhost'
+            host: '127.0.0.1'  // Explicitly bind to IPv4 localhost
         });
         
         this.wss.on('connection', (ws, request) => {

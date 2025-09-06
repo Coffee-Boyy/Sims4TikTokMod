@@ -3,6 +3,7 @@ from Utilities.compile_utils import _remove_files_conflicting_with_decompile, _r
 _remove_files_conflicting_with_decompile(decompile_ea_scripts=False)
 
 import traceback
+import shutil
 from typing import Iterator
 from zipfile import PyZipFile
 
@@ -100,9 +101,11 @@ class Unpyc3PythonCompiler:
         finally:
             _replace_renamed_files(decompile_ea_scripts=False)
 
-        # This code is meant to copy the file to the Mods folder, but in most cases, we probably do not want this to happen!
-        # ts4script_mods = os.path.join(os.path.join(mods_folder), script_zip_name)
-        # shutil.copyfile(ts4script, ts4script_mods)
+        # Copy the compiled ts4script file to the Mods folder
+        print(f'Copying {output_script_zip_name} to mods folder: {mods_folder}')
+        ts4script_mods = os.path.join(mods_folder, output_script_zip_name)
+        shutil.copyfile(ts4script, ts4script_mods)
+        print(f'Successfully copied {output_script_zip_name} to mods folder.')
 
     @classmethod
     def _child_directories_gen(cls, directory_path) -> Iterator[str]:
