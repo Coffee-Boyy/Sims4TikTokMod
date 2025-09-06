@@ -36,6 +36,9 @@ class TikTokBridgeClient:
         # Callback for when gift events are received
         self.on_gift_callback: Optional[Callable[[Dict[str, Any]], None]] = None
         
+        # Callback for when like events are received
+        self.on_like_callback: Optional[Callable[[Dict[str, Any]], None]] = None
+        
         # Connection retry settings
         self.max_retries = 5
         self.retry_delay = 5  # seconds
@@ -44,6 +47,10 @@ class TikTokBridgeClient:
     def set_gift_callback(self, callback: Callable[[Dict[str, Any]], None]) -> None:
         """Set the callback function to be called when gift events are received"""
         self.on_gift_callback = callback
+        
+    def set_like_callback(self, callback: Callable[[Dict[str, Any]], None]) -> None:
+        """Set the callback function to be called when like events are received"""
+        self.on_like_callback = callback
         
     def start(self) -> bool:
         """Start the WebSocket client connection"""
@@ -133,6 +140,9 @@ class TikTokBridgeClient:
             if event_type == 'gift' and self.on_gift_callback:
                 # Call the gift callback
                 self.on_gift_callback(data)
+            elif event_type == 'like' and self.on_like_callback:
+                # Call the like callback
+                self.on_like_callback(data)
             elif event_type == 'connection':
                 log.info(f"Bridge connection message: {data.get('message', '')}")
                 

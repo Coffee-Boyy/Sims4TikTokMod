@@ -81,11 +81,15 @@ class TikTokBridgeService {
         });
         
         this.tiktokConnection.on('like', (data) => {
+            const username = data.uniqueId || data.user?.uniqueId || 'unknown';
+            const count = data.likeCount || data.count || data.totalLikeCount || 'unknown';
+            
             if (process.argv.includes('--verbose')) {
-                const username = data.uniqueId || data.user?.uniqueId || 'unknown';
-                const count = data.likeCount || data.count || data.totalLikeCount || 'unknown';
                 console.log(`❤️  ${username} liked (${count} total)`);
             }
+            
+            // Forward like events to Sims 4 mod
+            this.processLikeEvent(data);
         });
         
         this.tiktokConnection.on('follow', (data) => {
@@ -194,6 +198,33 @@ class TikTokBridgeService {
                 description: payload.description
             });
         }
+        
+        // Send to all connected Sims 4 mod clients
+        this.broadcastToClients(payload);
+    }
+    
+    processLikeEvent(data) {
+        const currentTime = Date.now();
+        
+        // Reset minute counter if needed
+        if (currentTime - this.minuteStartTime >= 60000) {
+            this.eventsThisMinute = 0;
+            this.minuteStartTime = currentTime;
+        }
+        
+        // No rate limiting for likes - let Sims 4 mod handle accumulation
+        
+        // Create event payload for Sims 4 mod
+        const likeCount = data.likeCount || data.count || data.totalLikeCount || 1;
+        
+        const payload = {
+            type: 'like',
+            user: username,
+            likeCount: likeCount,
+            timestamp: new Date().toISOString()
+        };
+        
+        console.log(`❤️  Processing like: ${payload.user} liked (${payload.likeCount} total)`);
         
         // Send to all connected Sims 4 mod clients
         this.broadcastToClients(payload);
