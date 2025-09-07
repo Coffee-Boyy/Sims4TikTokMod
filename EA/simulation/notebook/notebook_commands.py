@@ -1,0 +1,82 @@
+from server_commands.argument_helpers import OptionalSimInfoParam, get_optional_target, RequiredTargetParamfrom sims4.commands import CommandTypefrom ui.notebook_tuning import NotebookCategories, NotebookSubCategoriesimport servicesimport sims4
+@sims4.commands.Command('notebook.generate_notebook', command_type=CommandType.Live)
+def generate_notebook(opt_sim:OptionalSimInfoParam=None, initial_category:int=None, initial_subcategory:int=None, _connection=None):
+    sim_info = get_optional_target(opt_sim, target_type=OptionalSimInfoParam, _connection=_connection)
+    if sim_info is not None and sim_info.notebook_tracker is not None:
+        initial_selected_category = None if initial_category is None else NotebookCategories(initial_category)
+        initial_selected_subcategory = None if initial_subcategory is None else NotebookSubCategories(initial_subcategory)
+        sim_info.notebook_tracker.generate_notebook_information(initial_selected_category=initial_selected_category, initial_selected_subcategory=initial_selected_subcategory)
+    return True
+
+@sims4.commands.Command('notebook.mark_entry_as_seen', command_type=CommandType.Live)
+def mark_entry_as_seen(sim:RequiredTargetParam, subcategory_id:int, entry_id:int, _connection=None):
+    sim_info = sim.get_target(manager=services.sim_info_manager())
+    if sim_info is None:
+        sims4.commands.output('Sim with id {} is not found to mark notebook entry as seen.'.format(sim.target_id), _connection)
+        return False
+    if sim_info.notebook_tracker is None:
+        sims4.commands.output('Notebook tracker is not found on Sim {} to mark notebook entry as seen'.format(sim_info), _connection)
+        return False
+    sim_info.notebook_tracker.mark_entry_as_seen(subcategory_id, entry_id)
+    return True
+
+@sims4.commands.Command('notebook.clear_notebook_btn_tooltip', command_type=CommandType.Live)
+def clear_notebook_btn_tooltip(sim_id:RequiredTargetParam, _connection=None):
+    sim_info = sim_id.get_target(manager=services.sim_info_manager())
+    if sim_info is None:
+        sims4.commands.output("Sim with id {} is not found to clear notebook button's tooltip.".format(sim_id.target_id), _connection)
+        return False
+    if sim_info.notebook_tracker is None:
+        sims4.commands.output("Notebook tracker is not found on Sim {} to clear notebook button's tooltip.".format(sim_info), _connection)
+        return False
+    sim_info.notebook_tracker.clear_notebook_btn_tooltip()
+    return True
+
+@sims4.commands.Command('notebook.save_notebook_btn_tooltip', command_type=CommandType.Live)
+def save_notebook_btn_tooltip(sim_id:RequiredTargetParam, tooltip:str, _connection=None):
+    sim_info = sim_id.get_target(manager=services.sim_info_manager())
+    if sim_info is None:
+        sims4.commands.output("Sim with id {} is not found to save notebook button's subcategory entry for the tooltip.".format(sim_id.target_id), _connection)
+        return False
+    if sim_info.notebook_tracker is None:
+        sims4.commands.output("Notebook tracker is not found on Sim {} to save notebook button's subcategory entry for the tooltip.".format(sim_info), _connection)
+        return False
+    sim_info.notebook_tracker.save_notebook_btn_tooltip(tooltip)
+    return True
+
+@sims4.commands.Command('notebook.save_notes', command_type=CommandType.Live)
+def save_notes(sim_id:RequiredTargetParam, text:str, _connection=None):
+    sim_info = sim_id.get_target(manager=services.sim_info_manager())
+    if sim_info is None:
+        sims4.commands.output('Sim with id {} is not found to save notebook notes.'.format(sim_id.target_id), _connection)
+        return False
+    if sim_info.notebook_tracker is None:
+        sims4.commands.output('Notebook tracker is not found on Sim {} to save notebook notes.'.format(sim_info), _connection)
+        return False
+    sim_info.notebook_tracker.save_notebook_notes(text)
+    return True
+
+@sims4.commands.Command('notebook.send_notebook_btn_update', command_type=CommandType.Live)
+def send_notebook_btn_update(sim_id:RequiredTargetParam, _connection=None):
+    sim_info = sim_id.get_target(manager=services.sim_info_manager())
+    if sim_info is None:
+        sims4.commands.output('Sim with id {} is not found to send notebook button tooltip.'.format(sim_id.target_id), _connection)
+        return False
+    if sim_info.notebook_tracker is None:
+        sims4.commands.output('Notebook tracker is not found on Sim {} to send notebook button tooltip.'.format(sim_info), _connection)
+        return False
+    sim_info.notebook_tracker.send_notebook_btn_update()
+    return True
+
+@sims4.commands.Command('notebook.hide_category', command_type=CommandType.Live)
+def hide_category(sim:RequiredTargetParam, category_id:int, _connection=None):
+    sim_info = sim.get_target(manager=services.sim_info_manager())
+    if sim_info is None:
+        sims4.commands.output('Sim with id {} is not found to mark notebook entry as seen.'.format(sim.target_id), _connection)
+        return False
+    if sim_info.notebook_tracker is None:
+        sims4.commands.output('Notebook tracker is not found on Sim {} to mark notebook entry as seen'.format(sim_info), _connection)
+        return False
+    sim_info.notebook_tracker.remove_entries_by_category(NotebookCategories(category_id))
+    return True
+

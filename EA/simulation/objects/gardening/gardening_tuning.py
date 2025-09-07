@@ -1,0 +1,87 @@
+from __future__ import annotationsfrom objects.collection_manager_enums import ObjectCollectionRarityfrom seasons.seasons_tuning import SeasonsTuningfrom sims4.localization import TunableLocalizedString, TunableLocalizedStringFactory, LocalizationHelperTuningfrom sims4.tuning.tunable import TunableList, TunableRange, TunableInterval, TunableMapping, TunableReference, TunableEnumEntry, TunableTuple, TunableVariant, TunablePercent, Tunable, TunableSet, TunablePackSafeReferencefrom tag import TunableTags, TunableTagfrom ui.ui_dialog_notification import UiDialogNotificationimport servicesimport sims4.resourcesfrom typing import TYPE_CHECKINGif TYPE_CHECKING:
+    from typing import *
+    from objects.definition import Definition
+    from objects.game_object import GameObject
+class GardeningTuning:
+    INHERITED_STATE = TunableReference(description='\n        Controls the state value that will be inherited by offspring.\n        ', manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectState')
+    SPONTANEOUS_GERMINATION_COMMODITY = TunableReference(manager=services.get_instance_manager(sims4.resources.Types.STATISTIC))
+    SPONTANEOUS_GERMINATION_COMMODITY_VARIANCE = TunableRange(description='\n        Max variance to apply when the spawn commodity is reset.  This helps\n        plants all not to sprout from seeds at the same time.\n        ', tunable_type=int, default=10, minimum=0)
+    SCALE_COMMODITY = TunableReference(manager=services.get_instance_manager(sims4.resources.Types.STATISTIC))
+    SCALE_VARIANCE = TunableInterval(description="\n        Control how much the size of child fruit can vary from its father's\n        size.\n        ", tunable_type=float, default_lower=0.8, default_upper=1.2)
+    EVOLUTION_STATE = TunableReference(description='\n        Object state which will represent the icon behind the main icon of \n        the gardening tooltip.  This should be tied to the evolution state\n        of gardening objects.\n        ', manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectState')
+    SHOOT_DESCRIPTION_STRING = TunableLocalizedString(description="\n        Text that will be given to a shoot description following ':' to its \n        fruit name.\n        e.g. 'Shoot taken from: Apple'\n        ")
+    DISABLE_DETAILS_STATE_VALUES = TunableList(description='\n            List of object state values where the gardening details should not \n            be shown.  This is for cases like Wild plants where we dont want\n            details that will not be used.\n            ', tunable=TunableReference(description='\n                The state that will disable the plant additional information.\n                ', manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectStateValue'))
+    DISABLE_TOOLTIP_STATE_VALUES = TunableList(description='\n            List of object state values where the gardening object will disable \n            its tooltip.\n            ', tunable=TunableReference(description='\n                The state that will disable the object tooltip.\n                ', manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectStateValue'))
+    DISABLE_EVOLUTION_IN_TOOLTIP_STATE_VALUES = TunableList(description='\n        List of object state values where the gardening object will disable \n        the evolution details in its tooltip when showing the gardening details.\n        ', tunable=TunableReference(description='\n                The state that will disable the evolution details in the tooltip.\n                ', manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectStateValue'))
+    SPLICED_PLANT_NAME = TunableLocalizedStringFactory(description='\n        Localized name to be set when a plant is spliced. \n        ')
+    SPLICED_STATE_VALUE = TunableReference(description='\n        The state that will mean this plant has been already spliced.  \n        ', manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectStateValue')
+    PICKUP_STATE_MAPPING = TunableMapping(description='\n        Mapping that will set a state that should be set on the fruit when \n        its picked up, depending on a state fruit is currently in.\n        ', key_type=TunableReference(manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectStateValue'), value_type=TunableReference(manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectStateValue'))
+    GARDENING_SLOT = TunableReference(description='\n        Slot type used by the gardening system to create its fruit.\n        ', manager=services.get_instance_manager(sims4.resources.Types.SLOT_TYPE))
+    GERMINATE_FAILURE_NOTIFICATION = UiDialogNotification.TunableFactory(description='\n        Notification that will tell the player that the plant has failed to\n        germinate.\n        ')
+    UNIDENTIFIED_STATE_VALUE = TunableReference(description='\n        The state value all unidentified plants will have.  Remember to add this\n        as the default value for a state in the identifiable plants state\n        component tuning.\n        ', manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectStateValue')
+    SEASONAL_STATUS_STATE = TunablePackSafeReference(description="\n        A reference to the state that determines whether a plant is\n        Dormant/Sheltered/In Season/Out of Season.\n        \n        The state value's display data is used in the UI tooltip for the plant.\n        ", manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectState')
+    IN_SEASON_STATE_VALUE = TunablePackSafeReference(description="\n        A reference to the state value that marks a plant as being 'In Season'.\n        \n        This state value is used to determine which Seasons the plant is active in.\n        ", manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectStateValue')
+    ALL_SEASONS_TEXT = TunableLocalizedString(description='\n        The seasons text to display if the plant is not tied to a specific season.\n        ')
+    ACTIVE_SEASONS_TEXT = TunableLocalizedStringFactory(description="\n        The text to display the plant's active seasons.\n        e.g.:\n        Seasons:\n{0.String}\n        ")
+    FRUIT_STATES = TunableMapping(description='\n        A mapping that defines which states on plants support fruits, and the\n        behavior when plants transition out of these states.\n        ', key_type=TunableReference(manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectState', pack_safe=True), value_type=TunableTuple(states=TunableList(description='\n                The list of states that supports fruit. If the object changes\n                state (for the specified state track) and the new value is not\n                in this list, the fruit is destroyed according to the specified\n                rule.\n                ', tunable=TunableReference(manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectStateValue', pack_safe=True), unique_entries=True), behavior=TunableVariant(description="\n                Define the fruit's behavior when plants exit a state that\n                supports fruit.\n                ", rot=TunablePercent(description='\n                    Define the chance that the fruit falls and rots, as opposed\n                    to just being destroyed.\n                    ', default=5), locked_args={'destroy': None}, default='destroy')))
+    FRUIT_DECAY_COMMODITY = TunableReference(description='\n        The commodity that defines fruit decay (e.g. rotten/ripe).\n        ', manager=services.get_instance_manager(sims4.resources.Types.STATISTIC))
+    FRUIT_DECAY_COMMODITY_DROPPED_VALUE = Tunable(description='\n        Value to set the Fruit Decay Commodity on a harvestable that has\n        been dropped from a plant during a seasonal transition.\n        ', tunable_type=int, default=10)
+    SPAWN_WEIGHTS = TunableMapping(description="\n        A fruit's chance to be spawned in a multi-fruit plant (e.g. via\n        splicing/grafting) is determined by its rarity.\n        \n        The weight is meant to curb the chance of spawning rarer fruits growing\n        on more common plants. It would never reduce the chance of the root\n        stock from spawning on its original plant.\n        \n        e.g.\n         A common Apple on a rare Pomegranate tree spawns at a 1:1 ratio.\n         A rare Pomegranate on a common Apple tree spawns at a 1:5 ratio.\n        ", key_type=TunableEnumEntry(tunable_type=ObjectCollectionRarity, default=ObjectCollectionRarity.COMMON), value_type=TunableRange(tunable_type=int, default=1, minimum=0))
+    EXCLUSIVE_FRUITS = TunableSet(description='\n        A set of fruits, which, when added onto a plant, can restrict\n        what other fruits the plant produces to this set of fruits. \n        This is done by adjusting spawn weight of non-exclusive fruits \n        on the plant to zero. \n        ', tunable=TunableReference(manager=services.get_instance_manager(sims4.resources.Types.OBJECT), pack_safe=True))
+    PLANT_CONTAINER_OBJECT_TAGS = TunableTuple(description='\n        List of tags used to determine the pot object the plant is slotted in. Used when prohibiting spawn slots\n        when the plant is slotted into these plant container objects.\n        ', medium_pot_tag=TunableTag(description='\n            The object tag for the Medium size Planter Pots.\n            ', filter_prefixes=('func',), pack_safe=True), vertical_garden_tag=TunableTag(description='\n            The object tag for the vertical garden wall object.\n            ', filter_prefixes=('func',), pack_safe=True))
+    PLANT_STATE_NAME_DECORATORS = TunableList(description="\n        This is a list of decorators to apply to the plant's name when its respective\n        object state is enabled. The decorators are applied in the order they appear\n        in this list.\n        ", tunable=TunableTuple(required_state=TunableReference(description='\n                The object state that adds the decorator around the plant name. \n                ', manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectStateValue', pack_safe=True), name_decorator=TunableLocalizedStringFactory(description="\n                The text to decorate plant's name when state is active.\n                e.g.:\n                Blighted {0.String}\n                ")))
+    ENCHANTED_STATE = TunablePackSafeReference(description="\n        The object state that is used for the plant's State of Enchantment.\n        ", manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectState')
+    ENCHANTED_STATE_VALUE_ON = TunablePackSafeReference(description='\n        The object state value for when the Enchantment State is On.\n        ', manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectStateValue')
+    ENCHANTED_STATE_VALUE_OFF = TunablePackSafeReference(description='\n        The object state value for when the Enchantment State is Off.\n        ', manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectStateValue')
+    ENCHANTED_STATE_VALUE_SUBSIDING = TunablePackSafeReference(description='\n        The object state value for when the Enchantment State is Subsiding or Wearing Off.\n        ', manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectStateValue')
+    ALWAYS_GERMINATE_IF_NOT_SPAWNED_STATE = TunableReference(description='\n        If the specified state value is active on the gardening object, it will\n        have a 100% germination chance for when it is placed in the world in\n        any way other than through a spawner.\n        ', manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectStateValue')
+    QUALITY_STATE_VALUE = TunableReference(description='\n        The quality state all gardening plants will have.  \n        ', manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectState')
+    CROP_FRUIT_QUALITY_STATE = TunablePackSafeReference(description='\n        The quality state used to determine the quality of crop fruits.  \n        ', manager=services.get_instance_manager(sims4.resources.Types.OBJECT_STATE), class_restrictions='ObjectState')
+
+    @classmethod
+    def is_spliced(cls, obj:'GameObject') -> 'bool':
+        if obj.has_state(cls.SPLICED_STATE_VALUE.state) and obj.get_state(cls.SPLICED_STATE_VALUE.state) == cls.SPLICED_STATE_VALUE:
+            return True
+        return False
+
+    @classmethod
+    def is_unidentified(cls, obj:'GameObject') -> 'bool':
+        if cls.UNIDENTIFIED_STATE_VALUE is not None and obj.has_state(cls.UNIDENTIFIED_STATE_VALUE.state) and obj.get_state(cls.UNIDENTIFIED_STATE_VALUE.state) == cls.UNIDENTIFIED_STATE_VALUE:
+            return True
+        return False
+
+    @classmethod
+    def is_enchanted(cls, obj:'GameObject') -> 'bool':
+        if cls.ENCHANTED_STATE is not None and obj.has_state(cls.ENCHANTED_STATE):
+            enchanted_state = obj.get_state(cls.ENCHANTED_STATE)
+            if enchanted_state == cls.ENCHANTED_STATE_VALUE_ON or enchanted_state == cls.ENCHANTED_STATE_VALUE_SUBSIDING:
+                return True
+        return False
+
+    @classmethod
+    def get_active_seasons_text_from_plant(cls, plant_definition:'Definition') -> 'Optional[str]':
+        season_component = plant_definition.cls._components.season_aware_component
+        if season_component is not None:
+            seasons = []
+            season_tuned_values = season_component._tuned_values
+            for (season_type, season_states) in season_tuned_values.seasonal_state_mapping.items():
+                if any(s is GardeningTuning.IN_SEASON_STATE_VALUE for s in season_states):
+                    season = SeasonsTuning.SEASON_TYPE_MAPPING[season_type]
+                    seasons.append((season_type, season))
+            if seasons:
+                return GardeningTuning.ACTIVE_SEASONS_TEXT(LocalizationHelperTuning.get_comma_separated_list(*tuple(season.season_name for (_, season) in sorted(seasons))))
+
+    @classmethod
+    def is_slotted_in_vertical_garden(cls, obj:'GameObject') -> 'bool':
+        if obj is None or obj.parent is None:
+            return False
+        obj_parent = obj.parent
+        return obj_parent.has_tag(cls.PLANT_CONTAINER_OBJECT_TAGS.vertical_garden_tag)
+
+    @classmethod
+    def is_slotted_in_medium_pot(cls, obj:'GameObject') -> 'bool':
+        if obj is None or obj.parent is None:
+            return False
+        obj_parent = obj.parent
+        return obj_parent.has_tag(cls.PLANT_CONTAINER_OBJECT_TAGS.medium_pot_tag)
+

@@ -1,0 +1,4 @@
+import servicesimport sims4from interactions import ParticipantTypeSinglefrom sims4.tuning.tunable import HasTunableFactory, AutoFactoryInit, TunableEnumEntry, TunableList, TunableReference
+class LuckConfig(HasTunableFactory, AutoFactoryInit):
+    FACTORY_TUNABLES = {'participant': TunableEnumEntry(description='\n            The participant whose luck we want to\n            check when calculating luck options.\n            ', tunable_type=ParticipantTypeSingle, default=ParticipantTypeSingle.Actor), 'loot_actions': TunableList(description='\n            Loots that are applied when luck has an impact in this context.\n            If you want a loot to apply when luck has an impact even outside\n            of this context, use the luck module tuning instead.\n            ', tunable=TunableReference(manager=services.get_instance_manager(sims4.resources.Types.ACTION), class_restrictions=('LootActions', 'RandomWeightedLoot'), pack_safe=True))}
+

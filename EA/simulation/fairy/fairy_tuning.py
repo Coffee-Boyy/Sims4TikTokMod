@@ -1,0 +1,17 @@
+import enumimport servicesimport sims4.resourcesfrom routing.portals.portal_tuning import PortalFlagsfrom sims4.tuning.tunable import Tunable, TunableTuple, TunablePackSafeReference, TunableEnumFlagsfrom sims4.tuning.tunable_hash import TunableStringHash32
+class WingTuning:
+    FAIRY_CARRY_WING_INTERACTION = TunablePackSafeReference(description='\n        The FairyCarryWingInteraction is used by the transition sequence to make\n        a fairy pull out their wings when they have been stowed.\n        ', manager=services.get_instance_manager(sims4.resources.Types.INTERACTION))
+    SIM_ROUTE_SATISFY_CONSTRAINT_INTERACTION = TunablePackSafeReference(description='\n        An interaction used by the transition sequence to route Sims close to a destination.\n        ', manager=services.get_instance_manager(sims4.resources.Types.INTERACTION))
+    FAIRY_SATISFY_CONSTRAINTS_INTERACTION = TunablePackSafeReference(description='\n        An interaction used by the transition sequence to route a fairy closer a\n        destination before putting their wings away.\n        ', manager=services.get_instance_manager(sims4.resources.Types.INTERACTION))
+    FAIRY_WING_BLOCKED_PORTAL_FLAGS = TunableEnumFlags(description='\n        Flags which denote portals a fairy should not be able to route through with\n        their wings out.\n        ', enum_type=PortalFlags)
+    FAIRY_WING_VISIBILITY_CHANGE_PATH_SEGMENT_MINIMUM_DISTANCE = Tunable(description='\n        The minimum distance a route or route segment must be for a fairy to take out or put\n        away their wings.\n        ', tunable_type=float, default=10)
+    FAIRY_WING_PUTDOWN_PATH_INTERRUPT_CONSTRAINT_RADIUS = Tunable(description="\n        The radius of the circle constraint we use to tell the fairy to put down their wings.\n        This radius is used on path interrupts, which are generally blocking portals. This radius\n        should be less than half of the wing visibility change path segment distance. If it's greater,\n        the fairy will get stuck at portals forever.\n        ", tunable_type=float, default=0.2)
+    FAIRY_WING_PUTDOWN_CONSTRAINT_RADIUS = Tunable(description="\n        The radius of the circle constraint we use to tell the fairy to put down their wings. This radius\n        is used typically when we're finalizing the path, and is larger to allow the Sim to route near objects\n        without failing to transition.\n        ", tunable_type=float, default=0.5)
+    CARRY_BACK_WING_PROXY_OBJECT = TunablePackSafeReference(description="\n        The CarryBackWingProxyObject is an object which the Sim carries on their back\n        which acts as a proxy for controlling a fairy sim's wing visibility.\n        ", manager=services.get_instance_manager(sims4.resources.Types.OBJECT))
+    WING_FIXUP_RULES = TunableTuple(description='\n        Tunables related to fixing up wings on load or travel.\n        ', WING_FIXUP_OWNING_AFFORDANCE=TunablePackSafeReference(description='\n            An interaction which we run as part of the fixup to own the object reservation\n            and carry.\n            ', manager=services.get_instance_manager(sims4.resources.Types.INTERACTION)), WING_CARRY_JOINT=TunableStringHash32(description='\n            The joint of the carrier sim to parent the carryable to.\n            '))
+
+class WingStateChangePathInterruptType(enum.Int):
+    NO_INTERRUPT = 0
+    INTERRUPT_AT_NODE = 1
+    INTERRUPT_IMMEDIATE = 2
+
