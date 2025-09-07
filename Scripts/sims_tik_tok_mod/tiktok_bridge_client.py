@@ -19,7 +19,7 @@ from sims_tik_tok_mod.modinfo import ModInfo
 
 # Create a logger for this module
 log = CommonLogRegistry.get().register_log(ModInfo.get_identity(), 'TikTokBridge')
-
+log.enable()
 
 class TikTokBridgeClient:
     """WebSocket client to connect to the TikTok bridge service"""
@@ -42,7 +42,9 @@ class TikTokBridgeClient:
         # Connection retry settings
         self.max_retries = 5
         self.retry_delay = 5  # seconds
+        self.max_retry_delay = 60  # maximum 60 seconds between retries
         self.current_retries = 0
+        self.last_retry_time = 0  # timestamp of last retry attempt
         
     def set_gift_callback(self, callback: Callable[[Dict[str, Any]], None]) -> None:
         """Set the callback function to be called when gift events are received"""
@@ -90,7 +92,22 @@ class TikTokBridgeClient:
         """Run the WebSocket connection with automatic reconnection"""
         while self.is_running and self.current_retries < self.max_retries:
             try:
-                log.info(f"[TikTokBridge] Attempting to connect to {self.url}")
+                # Check if enough time has passed since last retry (minimum 1 minute)
+                current_time = time.time()
+                time_since_last_retry = current_time - self.last_retry_time
+                
+                if self.current_retries > 0 and time_since_last_retry < self.max_retry_delay:
+                    # Wait for the remaining time to reach 1 minute
+                    wait_time = self.max_retry_delay - time_since_last_retry
+                    if self.is_running:
+                        time.sleep(wait_time)
+                    continue
+                
+                # Only log connection attempts for first try or after significant delays
+                if self.current_retries == 0 or time_since_last_retry >= self.max_retry_delay:
+                    log.info(f"[TikTokBridge] Attempting to connect to {self.url}")
+                
+                self.last_retry_time = current_time
                 
                 # Create WebSocket connection
                 self.ws = websocket.WebSocketApp(
@@ -108,17 +125,27 @@ class TikTokBridgeClient:
                 if self.is_running:
                     self.current_retries += 1
                     if self.current_retries < self.max_retries:
-                        log.info(f"[TikTokBridge] Connection lost. Retrying in {self.retry_delay} seconds... ({self.current_retries}/{self.max_retries})")
-                        time.sleep(self.retry_delay)
+                        # Use exponential backoff with max delay of 60 seconds
+                        delay = min(self.retry_delay * (2 ** (self.current_retries - 1)), self.max_retry_delay)
+                        log.info(f"[TikTokBridge] Connection lost. Will retry in {delay} seconds... ({self.current_retries}/{self.max_retries})")
+                        time.sleep(delay)
                     else:
                         log.info("[TikTokBridge] Max retries reached. Stopping TikTok bridge client.")
                         break
                         
             except Exception as e:
-                log.error(f"[TikTokBridge] Connection error: {e}")
+                # Silent error handling - only log on first attempt or after significant delays
+                current_time = time.time()
+                time_since_last_retry = current_time - self.last_retry_time
+                
+                if self.current_retries == 0 or time_since_last_retry >= self.max_retry_delay:
+                    log.error(f"[TikTokBridge] Connection error: {e}")
+                
                 self.current_retries += 1
                 if self.is_running and self.current_retries < self.max_retries:
-                    time.sleep(self.retry_delay)
+                    # Use exponential backoff with max delay of 60 seconds
+                    delay = min(self.retry_delay * (2 ** (self.current_retries - 1)), self.max_retry_delay)
+                    time.sleep(delay)
                     
         self.is_running = False
         self.is_connected = False
@@ -149,20 +176,33 @@ class TikTokBridgeClient:
         except json.JSONDecodeError as e:
             log.error(f"Failed to parse message from bridge: {e}")
         except Exception as e:
-            log.exception(f"Error handling bridge message: {e}")
+            log.error(f"Error handling bridge message: {e}")
             
     def _on_error(self, ws, error) -> None:
         """Called when a WebSocket error occurs"""
         try:
-            # Use print instead of log to avoid potential recursion issues
-            log.error(f"[TikTokBridge] WebSocket error: {error}")
+            # Silent error handling - only log errors that are significant
+            # Avoid logging common connection errors that happen during reconnection
+            current_time = time.time()
+            time_since_last_retry = current_time - self.last_retry_time
+            
+            # Only log errors on first attempt or after significant delays to avoid spam
+            if self.current_retries == 0 or time_since_last_retry >= self.max_retry_delay:
+                log.error(f"[TikTokBridge] WebSocket error: {error}")
         except:
-            # If even print fails, just pass to avoid crashes
+            # If even logging fails, just pass to avoid crashes
             pass
         
     def _on_close(self, ws, close_status_code, close_msg) -> None:
         """Called when WebSocket connection is closed"""
-        log.info("[TikTokBridge] Disconnected from TikTok bridge")
+        # Silent handling for frequent disconnections during reconnection attempts
+        current_time = time.time()
+        time_since_last_retry = current_time - self.last_retry_time
+        
+        # Only log disconnections on first attempt or after significant delays
+        if self.current_retries == 0 or time_since_last_retry >= self.max_retry_delay:
+            log.info("[TikTokBridge] Disconnected from TikTok bridge")
+        
         self.is_connected = False
         
     def send_response(self, gift_data: Dict[str, Any], action: str) -> None:

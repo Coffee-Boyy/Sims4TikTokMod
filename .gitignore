@@ -54,3 +54,5 @@ custom_scripts_for_decompile/**/*.py
 Tunings/Temp
 
 node_modules/
+
+config.json
