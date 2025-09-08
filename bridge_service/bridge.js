@@ -341,8 +341,8 @@ class TikTokBridgeService {
     }
     
     getProfilePictureUrl(username) {
-        return "https://p19-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-avt-0068-tx2/d94b9222ec1d97f4245acc9b860b417e~tplv-tiktokx-cropcenter:1080:1080.jpeg?dr=9640&refresh_token=19c901a3&x-expires=1757372400&x-signature=HdmRsI286XGuH8vgk%2FdJBJsRFjY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5";
-        // return "https://p19-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/96342a004e5b15067605aeb18c70faf1~tplv-tiktokx-cropcenter:1080:1080.jpeg?dr=9640&refresh_token=6f355dd4&x-expires=1757368800&x-signature=EdaetmYBWIdwSWQiZRx9SKYY43I%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5";
+        // return "https://p19-pu-sign-useast8.tiktokcdn-us.com/tos-useast8-avt-0068-tx2/d94b9222ec1d97f4245acc9b860b417e~tplv-tiktokx-cropcenter:1080:1080.jpeg?dr=9640&refresh_token=19c901a3&x-expires=1757372400&x-signature=HdmRsI286XGuH8vgk%2FdJBJsRFjY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5";
+        return "https://p19-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/96342a004e5b15067605aeb18c70faf1~tplv-tiktokx-cropcenter:1080:1080.jpeg?dr=9640&refresh_token=6f355dd4&x-expires=1757368800&x-signature=EdaetmYBWIdwSWQiZRx9SKYY43I%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5";
     }
     
     async analyzeUserAppearance(username) {
@@ -678,16 +678,7 @@ If you cannot determine an attribute, use reasonable defaults.`;
                 description: 'Manual test gift',
                 timestamp: new Date().toISOString(),
                 diamondTracking: fakeDiamondTracking,
-                appearanceAnalysis: {
-                    "hair_color": "blonde",
-                    "skin_tone": "very_light",
-                    "eye_color": "green",
-                    "gender": "female",
-                    "age": "young_adult",
-                    "hair_style": "medium",
-                    "confidence": 0.85
-                }
-                // appearanceAnalysis: appearanceAnalysis
+                appearanceAnalysis: appearanceAnalysis
             };
             
             // Send the event to connected clients (same format as real gifts)

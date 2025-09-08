@@ -8,7 +8,12 @@
     "start": "node bridge.js",
     "dev": "node bridge.js --verbose",
     "test": "node test-client.js",
-    "test-sim-creation": "node test-sim-creation.js"
+    "test-sim-creation": "node test-sim-creation.js",
+    "pkg:list": "node test-package-cli.js",
+    "pkg:hair": "node test-package-cli.js --hair --names",
+    "pkg:custom": "node test-custom-parser.js",
+    "pkg:info": "node test-custom-parser.js --info",
+    "pkg:validate": "node test-custom-parser.js --validate"
   },
   "keywords": [
     "tiktok",
@@ -20,8 +25,10 @@
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
+    "@s4tk/models": "^0.6.14",
     "axios": "^1.6.0",
     "form-data": "^4.0.0",
+    "json-bigint": "^1.0.0",
     "openai": "^4.20.0",
     "tiktok-live-connector": "^2.0.7-beta1",
     "ws": "^8.14.2",

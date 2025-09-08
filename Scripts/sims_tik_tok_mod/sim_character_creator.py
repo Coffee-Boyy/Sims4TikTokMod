@@ -39,21 +39,21 @@ class SimCharacterCreator:
     """Handles sim character creation when triggered by bridge service"""
     # Optional mapping tables for deterministic appearance (fill with real IDs as needed)
     SKIN_TONE_TO_ID = {
-        'very_light': 0xF4350416521A932F,
-        'light': 0xDF17C935279D2CE7,
-        'fair': 0x3AAF1F86EC570A8F,
-        'medium': 0x9DAE380C85D28E27,
-        'tan': 0x3C9CA78D6CE665C8,
-        'olive': 0xB1730B45DACDC7B8,
-        'brown': 0x98761C4FE0E5619A,
-        'dark': 0x647DDF568A1933C7,
-        'very_dark': 0x12D533D4012ADD53,
+        'very_light': 0x0000000000040B2F,
+        'light': 0x0000000000040B92,
+        'fair': 0x0000000000003840,
+        'medium': 0x000000000000AFC7,
+        'tan': 0x0000000000040A92,
+        'olive': 0x00000000000406E3,
+        'brown': 0x00000000000406E5,
+        'dark': 0x00000000000407F0,
+        'very_dark': 0x0000000000040CA8,
     }
 
     HAIR_STYLE_TO_CAS_PART = {
-        # 'short': 0,
-        # 'medium': 0,
-        # 'long': 0,
+        'short': 0x00000000000442F0,
+        'medium': 0x0000000000044410,
+        'long': 0x00000000000443B1,
         # 'bald': None,  # handled separately
     }
     
@@ -237,37 +237,8 @@ class SimCharacterCreator:
                             mapped_part_id = cls.HAIR_STYLE_TO_CAS_PART.get(hair_style_key)  # type: ignore[attr-defined]
                         except Exception:
                             mapped_part_id = None
-                        if isinstance(mapped_part_id, int) and mapped_part_id > 0:
-                            set_hair_part = AppearanceModifier.SetCASPart(
-                                cas_part=mapped_part_id,
-                                should_toggle=False,
-                                replace_with_random=False,
-                                update_genetics=True,
-                                _is_combinable_with_same_type=False,
-                                remove_conflicting=True,
-                                hsv_color_shift=None,
-                                object_id=0,
-                                part_layer_index=-1,
-                                rgba_color_shift=0,
-                                should_refresh_thumbnail=False,
-                                outfit_type_compatibility=None,
-                                appearance_modifier_tag=None,
-                                expect_invalid_parts=False
-                            )
-                            tracker = getattr(sim_info, 'appearance_tracker', None)
-                            sim_id = getattr(sim_info, 'id', None)
-                            if tracker is not None and sim_id is not None:
-                                tracker.add_appearance_modifier(
-                                    set_hair_part,
-                                    sim_id,
-                                    AppearanceModifierPriority.INVALID,
-                                    True,
-                                    source='SimCharacterCreator'
-                                )
-                                tracker.evaluate_appearance_modifiers()
-                            log.info(f"Applied mapped hair style '{hair_style_key}' with part {mapped_part_id}")
-                        # Attempt to apply hair color tint to the current hair CAS part
-                        hair_part_id = cls._get_current_hair_part_id(sim_info)
+
+                        hair_part_id = mapped_part_id if mapped_part_id is not None else cls._get_current_hair_part_id(sim_info)
                         if hair_part_id is not None:
                             rgba_shift = cls._map_hair_color_to_rgba_shift(appearance.hair_color)
                             if rgba_shift is not None:

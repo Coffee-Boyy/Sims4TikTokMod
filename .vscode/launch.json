@@ -2,6 +2,19 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Test Package CLI",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/bridge_service",
+            "program": "test-package-cli.js",
+            "args": [
+              "/Applications/EA Games/The Sims 4.app/Contents/Data/Client/ClientDeltaBuild0.package"
+            ],
+            "skipFiles": [
+              "<node_internals>/**"
+            ]
+        },
+        {
             "name": "Python: Current File",
             "type": "debugpy",
             "request": "launch",

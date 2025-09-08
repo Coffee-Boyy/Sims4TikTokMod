@@ -24,5 +24,15 @@
         }
     ],
     "python.defaultInterpreterPath": "python3",
-    "python.terminal.activateEnvironment": true
+    "python.terminal.activateEnvironment": true,
+    "cursorpyright.analysis.extraPaths": [
+        "./Scripts",
+        "./Libraries/S4CL",
+        "./Utilities"
+    ],
+    "cursorpyright.analysis.include": [
+        "./Scripts",
+        "./Libraries/S4CL",
+        "./Utilities"
+    ]
 }

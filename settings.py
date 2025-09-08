@@ -38,10 +38,12 @@ if should_decompile_ea_scripts:
     decompile_method_name = S4PyDecompilationMethod.UNPYC3
     should_decompile_custom_scripts = False
 
-mods_folder = "/home/connor/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/compatdata/1222670/pfx/drive_c/users/steamuser/Documents/Electronic Arts/The Sims 4/Mods"
+# mods_folder = "/home/connor/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/compatdata/1222670/pfx/drive_c/users/steamuser/Documents/Electronic Arts/The Sims 4/Mods"
+mods_folder = "/Users/connor/Documents/Electronic Arts/The Sims 4/Mods"
 print(f'Mods folder path: {mods_folder}')
 
 # Location of the game's zipped binary scripts (base.zip, core.zip and simulation.zip)
 # If this path is not found properly when trying to decompile, change it to the location where you have installed The Sims 4 at, this would be the folder that contains the GameVersion.txt file
-game_folder = "/home/connor/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/The Sims 4"
+# game_folder = "/home/connor/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/The Sims 4"
+game_folder = "/Applications/EA Games/The Sims 4.app/Contents"
 print(f'Game folder path: {game_folder}')
