@@ -53,7 +53,7 @@ body {
     background: white;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
-    padding: 24px;
+    padding: 16px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -61,9 +61,7 @@ body {
     font-size: 1.2rem;
     font-weight: 600;
     color: #333;
-    margin-bottom: 16px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 4px;
 }
 
 .panel-description {
@@ -118,7 +116,7 @@ select:focus {
 
 /* Checkbox */
 .checkbox-label {
-    display: flex;
+    display: flex !important;
     align-items: center;
     cursor: pointer;
     font-weight: 500;
@@ -297,14 +295,7 @@ select:focus {
 }
 
 /* Log */
-.log-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #e0e0e0;
-}
+/* Log controls styling moved to panel-header-with-controls */
 
 .log-header .panel-title {
     margin-bottom: 0;
@@ -435,6 +426,208 @@ select:focus {
     background: #718096;
 }
 
+#manual-commands-panel {
+    grid-column: 1 / -1; /* Span all columns */
+}
+
+#gift-config-panel {
+    grid-column: 1 / -1; /* Span all columns */
+}
+
+.panel-header-with-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 5px;
+    width: 100%;
+    position: relative;
+}
+
+.panel-header-with-controls::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: -16px;
+    right: -16px;
+    height: 1px;
+    background-color: #e0e0e0;
+}
+
+.panel-header-standard {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    position: relative;
+}
+
+.panel-header-standard::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: -16px;
+    right: -16px;
+    height: 1px;
+    background-color: #e0e0e0;
+}
+
+.panel-header-content {
+    flex: 1;
+}
+
+.panel-header-with-controls .panel-title {
+    margin-bottom: 8px;
+}
+
+.panel-header-with-controls .panel-description {
+    margin-bottom: 0;
+}
+
+.config-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.log-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.gift-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.gift-item {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    transition: all 0.2s ease;
+}
+
+.gift-item:hover {
+    border-color: #007aff;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1);
+}
+
+.gift-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.gift-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 18px;
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+    padding: 2px;
+}
+
+.gift-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.gift-icon .fallback-icon {
+    font-size: 16px;
+}
+
+.gift-info {
+    flex: 1;
+}
+
+.gift-name {
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 4px 0;
+    font-size: 14px;
+}
+
+.gift-cost {
+    color: #666;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.diamond-icon {
+    color: #4fc3f7;
+    font-size: 12px;
+}
+
+.gift-mapping {
+    margin-top: 12px;
+}
+
+.gift-mapping label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.gift-mapping select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+    background: white;
+    color: #333;
+    transition: border-color 0.2s ease;
+}
+
+.gift-mapping select:focus {
+    outline: none;
+    border-color: #007aff;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+.gift-tier {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tier-basic {
+    background: #e8f5e8;
+    color: #2e7d32;
+}
+
+.tier-premium {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.tier-luxury {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.tier-exclusive {
+    background: #ffebee;
+    color: #c62828;
+}
+
 /* Footer */
 .footer {
     text-align: center;
@@ -443,6 +636,59 @@ select:focus {
     font-size: 12px;
     border-top: 1px solid #e0e0e0;
     background: #fafafa;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    font-size: 12px;
+    color: #666;
+}
+
+/* Gift actions and test button styling */
+.gift-actions {
+    margin-left: auto;
+}
+
+.btn-test {
+    background: #007AFF;
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-weight: 500;
+}
+
+.btn-test:hover {
+    background: #0056CC;
+}
+
+.btn-test:active {
+    background: #004499;
+}
+
+.btn-test:disabled {
+    background: rgba(99, 99, 102, 0.6);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.github-link {
+    color: #007aff;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.github-link:hover {
+    color: #0056cc;
+    text-decoration: underline;
 }
 
 /* Responsive */
@@ -484,10 +730,6 @@ select:focus {
     
     .footer {
         padding: 12px 20px;
-    }
-    
-    .panel {
-        padding: 16px;
     }
 }
 

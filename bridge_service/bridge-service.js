@@ -35,6 +35,9 @@ class TikTokBridgeService {
         this.aiApiKey = config.aiAnalysis?.openaiApiKey;
         this.aiModel = config.aiAnalysis?.model || 'gpt-5-mini';
         this.aiTimeout = config.aiAnalysis?.timeout || 30000;
+        
+        // Gift mappings for interactions
+        this.giftMappings = {};
         this.aiEnabled = config.aiAnalysis?.enabled !== false && !!this.aiApiKey;
         
         if (this.aiEnabled) {
@@ -271,6 +274,13 @@ class TikTokBridgeService {
         }
         
         this.log(`🎁 Processing gift: ${payload.user} sent "${payload.giftDisplayName}" (x${payload.value}) [${payload.diamondCount} 💎]`, 'gift');
+        
+        // Check for gift mapping and add interaction data
+        const giftKey = payload.gift.toLowerCase();
+        if (this.giftMappings[giftKey] && this.giftMappings[giftKey] !== 'none') {
+            payload.simsInteraction = this.giftMappings[giftKey];
+            this.log(`🎭 Mapped to Sims interaction: ${this.giftMappings[giftKey]}`, 'info');
+        }
     }
     
     async processDiamondTracking(username, diamondCount, profilePictureUrl) {
@@ -628,27 +638,57 @@ If you cannot determine an attribute, use reasonable defaults.`;
         }
     }
     
-    handleManualGiftCommand(username, giftName, diamondCount) {
-        this.log(`🎮 Sending test gift: ${username} sent ${giftName} (${diamondCount} diamonds)`, 'manual');
+    handleManualGiftCommand(giftData) {
+        const { username, giftName, diamondCount, giftId, tier, icon, simsInteraction, simsInteractionLabel } = giftData;
         
-        const giftData = {
+        this.log(`🎮 Sending manual gift: ${username} sent ${giftName} (${diamondCount} diamonds)`, 'manual');
+        
+        // Create gift event payload in the same format as real TikTok events
+        const payload = {
             type: 'gift',
             user: username,
             gift: giftName.toLowerCase(),
             giftDisplayName: giftName,
             value: 1,
-            giftId: Math.floor(Math.random() * 100000),
+            giftId: giftId || Math.floor(Math.random() * 100000),
             diamondCount: diamondCount,
-            description: `Manual test ${giftName} gift`,
-            profilePictureUrl: 'https://via.placeholder.com/150/4ECDC4/FFFFFF?text=Test',
-            timestamp: new Date().toISOString()
+            description: `Manual ${giftName} gift (${tier} tier)`,
+            profilePictureUrl: 'https://via.placeholder.com/150/4ECDC4/FFFFFF?text=Manual',
+            timestamp: new Date().toISOString(),
+            tier: tier,
+            icon: icon
         };
         
-        // Send the event to connected clients (same format as real gifts)
-        this.log(`📤 Sending test gift event: ${username} -> ${giftName} (${diamondCount} diamonds)`, 'manual');
-        this.broadcastToClients(giftData);
+        // Add Sims interaction if mapped
+        if (simsInteraction && simsInteraction !== 'none') {
+            payload.simsInteraction = simsInteraction;
+            this.log(`🎭 Mapped to Sims interaction: ${simsInteractionLabel || simsInteraction}`, 'info');
+        }
         
-        this.log(`✅ Test gift event sent: ${username} -> ${giftName} (${diamondCount} diamonds)`, 'success');
+        // Check for gift mapping and add interaction data (fallback if not provided)
+        if (!payload.simsInteraction) {
+            const giftKey = payload.gift.toLowerCase();
+            if (this.giftMappings[giftKey] && this.giftMappings[giftKey] !== 'none') {
+                payload.simsInteraction = this.giftMappings[giftKey];
+                this.log(`🎭 Mapped to Sims interaction: ${this.giftMappings[giftKey]}`, 'info');
+            }
+        }
+        
+        // Send the event to connected clients (same format as real gifts)
+        this.log(`📤 Sending manual gift event: ${username} -> ${giftName} (${diamondCount} 💎)`, 'manual');
+        this.broadcastToClients(payload);
+        
+        const interactionText = payload.simsInteraction ? ` → ${payload.simsInteraction}` : '';
+        this.log(`✅ Manual gift event sent: ${username} -> ${giftName} (${diamondCount} 💎)${interactionText}`, 'success');
+    }
+
+    updateGiftMappings(mappings) {
+        this.giftMappings = { ...mappings };
+        this.log(`🔧 Gift mappings updated: ${Object.keys(mappings).length} gifts configured`, 'info');
+    }
+
+    getGiftMappings() {
+        return { ...this.giftMappings };
     }
 
     startDiamondTrackerCleanup() {

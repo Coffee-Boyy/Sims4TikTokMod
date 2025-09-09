@@ -13,6 +13,12 @@ try {
         sendManualGift: (giftData) => ipcRenderer.invoke('send-manual-gift', giftData),
         spawnSim: (username) => ipcRenderer.invoke('spawn-sim', username),
         
+        // Gift configuration
+        saveGiftMappings: (mappings) => ipcRenderer.invoke('save-gift-mappings', mappings),
+        loadGiftMappings: () => ipcRenderer.invoke('load-gift-mappings'),
+        
+        // External links
+        openExternal: (url) => ipcRenderer.invoke('open-external', url),
         
         // Dialog functions
         showInfoDialog: (options) => ipcRenderer.invoke('show-info-dialog', options),

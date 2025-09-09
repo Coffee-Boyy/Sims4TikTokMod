@@ -174,24 +174,6 @@ ipcMain.handle('get-bridge-status', () => {
     };
 });
 
-ipcMain.handle('send-manual-gift', async (event, giftData) => {
-    try {
-        if (!bridgeService) {
-            return { success: false, message: 'Bridge service not running' };
-        }
-        
-        bridgeService.handleManualGiftCommand(
-            giftData.username,
-            giftData.giftName,
-            giftData.diamondCount
-        );
-        
-        return { success: true, message: 'Gift sent successfully' };
-    } catch (error) {
-        return { success: false, message: error.message };
-    }
-});
-
 ipcMain.handle('spawn-sim', async (event, username) => {
     try {
         if (!bridgeService) {
@@ -223,4 +205,53 @@ ipcMain.handle('show-error-dialog', async (event, options) => {
         options.message
     );
     return result;
+});
+
+ipcMain.handle('open-external', async (event, url) => {
+    try {
+        await shell.openExternal(url);
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to open external URL:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('save-gift-mappings', async (event, mappings) => {
+    try {
+        if (bridgeService) {
+            bridgeService.updateGiftMappings(mappings);
+        }
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to save gift mappings:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('load-gift-mappings', async (event) => {
+    try {
+        if (bridgeService) {
+            const mappings = bridgeService.getGiftMappings();
+            return { success: true, mappings };
+        }
+        return { success: true, mappings: {} };
+    } catch (error) {
+        console.error('Failed to load gift mappings:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('send-manual-gift', async (event, giftData) => {
+    try {
+        if (bridgeService) {
+            bridgeService.handleManualGiftCommand(giftData);
+            return { success: true, message: `Manual gift sent: ${giftData.giftName}` };
+        } else {
+            return { success: false, message: 'Bridge service not running' };
+        }
+    } catch (error) {
+        console.error('Failed to send manual gift:', error);
+        return { success: false, message: error.message };
+    }
 });
