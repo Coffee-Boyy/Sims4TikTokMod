@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sims 4 TikTok Bridge</title>
+    <link rel="stylesheet" href="renderer.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">Sims 4 TikTok Bridge</h1>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Connection Panel -->
+            <section class="panel">
+                <h2 class="panel-title">Connection Settings</h2>
+                <div class="form-group">
+                    <label for="username">TikTok Username:</label>
+                    <input type="text" id="username" placeholder="Enter TikTok username (without @)" value="hanhan52052">
+                    <small class="help-text">Enter the TikTok username you want to connect to</small>
+                </div>
+
+
+                <div class="form-group">
+                    <label class="checkbox-label" for="manual-mode">
+                        <input type="checkbox" id="manual-mode">
+                        <span class="checkmark"></span>
+                        <span class="checkbox-text">Manual Mode (No TikTok connection required)</span>
+                    </label>
+                </div>
+
+                <div class="button-group">
+                    <button id="start-btn" class="btn btn-primary">Start Bridge</button>
+                    <button id="stop-btn" class="btn btn-danger" disabled>Stop Bridge</button>
+                </div>
+            </section>
+
+            <!-- Status Panel -->
+            <section class="panel">
+                <h2 class="panel-title">Status</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-label">Status:</span>
+                        <span id="connection-status" class="status-value status-stopped">Stopped</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Sims 4 Clients:</span>
+                        <span id="client-count" class="status-value">0</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Current User:</span>
+                        <span id="current-user" class="status-value">None</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Manual Commands Panel -->
+            <section class="panel" id="manual-commands-panel" style="display: none;">
+                <h2 class="panel-title">Manual Commands</h2>
+                <p class="panel-description">Send test events to your Sims 4 mod</p>
+                
+                <div class="command-section">
+                    <h3>Spawn Sim</h3>
+                    <div class="form-group">
+                        <label for="spawn-username">Username:</label>
+                        <input type="text" id="spawn-username" placeholder="testuser123">
+                    </div>
+                    <button id="spawn-sim-btn" class="btn btn-secondary">Spawn Sim</button>
+                </div>
+
+                <div class="command-section">
+                    <h3>Send Gift</h3>
+                    <div class="form-group">
+                        <label for="gift-username">Username:</label>
+                        <input type="text" id="gift-username" placeholder="testuser123">
+                    </div>
+                    <div class="form-group">
+                        <label for="gift-name">Gift Name:</label>
+                        <select id="gift-name">
+                            <option value="rose">Rose</option>
+                            <option value="heart">Heart</option>
+                            <option value="diamond">Diamond</option>
+                            <option value="rocket">Rocket</option>
+                            <option value="lion">Lion</option>
+                            <option value="gg">GG</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="diamond-count">Diamond Count:</label>
+                        <input type="number" id="diamond-count" placeholder="5" value="1" min="0">
+                    </div>
+                    <button id="send-gift-btn" class="btn btn-secondary">Send Gift</button>
+                </div>
+            </section>
+
+            <!-- Log Panel -->
+            <section class="panel log-panel">
+                <div class="log-header">
+                    <h2 class="panel-title">Activity Log</h2>
+                    <div class="log-controls">
+                        <button id="clear-log-btn" class="btn btn-small">Clear Log</button>
+                        <label class="checkbox-label" for="auto-scroll">
+                            <input type="checkbox" id="auto-scroll" checked>
+                            <span class="checkmark"></span>
+                            <span class="checkbox-text">Auto-scroll</span>
+                        </label>
+                    </div>
+                </div>
+                <div id="log-container" class="log-container">
+                    <div class="log-entry log-info">
+                        <span class="log-timestamp">[Starting]</span>
+                        <span class="log-message">Welcome to Sims 4 TikTok Bridge! Configure your settings above and click "Start Bridge".</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Built by Coffee Boy</p>
+        </footer>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
