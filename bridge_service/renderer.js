@@ -7,6 +7,7 @@ const elements = {
     startBtn: document.getElementById('start-btn'),
     stopBtn: document.getElementById('stop-btn'),
     clearLogBtn: document.getElementById('clear-log-btn'),
+    themeToggle: document.getElementById('theme-toggle'),
     
     // Status
     connectionStatus: document.getElementById('connection-status'),
@@ -38,6 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     console.log('Electron API loaded successfully');
+    
+    // Initialize theme detection
+    initializeThemeDetection();
+    
     setupEventListeners();
     updateStatus();
     startStatusPolling();
@@ -54,6 +59,11 @@ function setupEventListeners() {
     // Log controls
     elements.clearLogBtn.addEventListener('click', clearLog);
     
+    // Theme toggle
+    if (elements.themeToggle) {
+        elements.themeToggle.addEventListener('click', toggleTheme);
+    }
+    
     // Listen for log messages from main process
     window.electronAPI.onLogMessage((logMessage) => {
         addLogEntry(logMessage);
@@ -63,7 +73,7 @@ function setupEventListeners() {
 async function startBridge() {
     const username = elements.username.value.trim();
     const port = 8765; // Default port, configurable via config.json
-    const manualMode = elements.manualMode.checked;
+    const manualMode = false;
     
     if (!username && !manualMode) {
         showError('TikTok username is required unless using manual mode');
@@ -317,6 +327,11 @@ function showSuccess(message) {
     console.log('SUCCESS:', message);
 }
 
+function showInfo(message) {
+    // You could implement a toast notification system here
+    console.log('INFO:', message);
+}
+
 function showError(message) {
     // You could implement a toast notification system here
     console.error('ERROR:', message);
@@ -543,15 +558,15 @@ function createGiftItem(gift) {
         const selectedInteraction = e.target.value;
         currentGiftMappings[giftId] = selectedInteraction;
         
-        // Log the change and auto-save configuration
+        // Log the change (but don't save yet)
         addLogEntry({
             type: 'info',
-            message: `🎁 Gift mapping updated: ${gift.name} → ${SIMS_INTERACTIONS.find(i => i.value === selectedInteraction)?.icon || ''} ${SIMS_INTERACTIONS.find(i => i.value === selectedInteraction)?.label || 'Unknown'}`,
+            message: `🎁 Gift mapping updated: ${gift.name} → ${SIMS_INTERACTIONS.find(i => i.value === selectedInteraction)?.icon || ''} ${SIMS_INTERACTIONS.find(i => i.value === selectedInteraction)?.label || 'Unknown'} (unsaved)`,
             timestamp: new Date().toISOString()
         });
         
-        // Save configuration silently (without logging)
-        saveGiftConfiguration(true).catch(console.error);
+        // Mark configuration as having unsaved changes
+        markConfigurationAsUnsaved(giftId);
     });
 
     // Add event listener for test button
@@ -569,8 +584,13 @@ function setupGiftConfigurationEvents() {
     // Save configuration button
     const saveBtn = document.getElementById('save-config-btn');
     if (saveBtn) {
-        saveBtn.addEventListener('click', () => {
-            saveGiftConfiguration();
+        saveBtn.addEventListener('click', async () => {
+            if (!hasUnsavedChanges) {
+                showInfo('No changes to save.');
+                return;
+            }
+            
+            await saveGiftConfiguration();
             showSuccess('Gift configuration saved successfully!');
         });
     }
@@ -593,11 +613,14 @@ async function saveGiftConfiguration(silent = false) {
         
         // Also save to bridge service if available
         if (window.electronAPI && window.electronAPI.saveGiftMappings) {
-            await window.electronAPI.saveGiftMappings(currentGiftMappings);
+            const result = await window.electronAPI.saveGiftMappings(currentGiftMappings);
+            if (result && !result.success) {
+                throw new Error(result.error || 'Bridge service failed to save gift mappings');
+            }
         }
         
-        // Update manual gift selection info if visible
-        updateSelectedGiftInfo();
+        // Mark as saved and update UI
+        markConfigurationAsSaved();
         
         // Only log if not silent
         if (!silent) {
@@ -609,7 +632,34 @@ async function saveGiftConfiguration(silent = false) {
         }
     } catch (error) {
         console.error('Failed to save gift configuration:', error);
-        showError('Failed to save gift configuration');
+        showError(`Failed to save gift configuration: ${error.message}`);
+    }
+}
+
+function markConfigurationAsUnsaved(giftId = null) {
+    hasUnsavedChanges = true;
+    if (giftId) {
+        changedGifts.add(giftId);
+    }
+    updateUnsavedChangesDisplay();
+}
+
+function markConfigurationAsSaved() {
+    hasUnsavedChanges = false;
+    changedGifts.clear();
+    updateUnsavedChangesDisplay();
+}
+
+function updateUnsavedChangesDisplay() {
+    const unsavedLabel = document.getElementById('unsaved-changes-label');
+    if (unsavedLabel) {
+        const changeCount = changedGifts.size;
+        if (hasUnsavedChanges && changeCount > 0) {
+            unsavedLabel.textContent = `${changeCount} unsaved change${changeCount !== 1 ? 's' : ''}`;
+            unsavedLabel.style.display = 'inline-block';
+        } else {
+            unsavedLabel.style.display = 'none';
+        }
     }
 }
 
@@ -623,20 +673,28 @@ function loadGiftConfiguration() {
                 message: '📁 Gift configuration loaded',
                 timestamp: new Date().toISOString()
             });
+        } else {
+            currentGiftMappings = { ...DEFAULT_GIFT_MAPPINGS };
         }
+        
+        // Mark as saved since we just loaded from disk
+        markConfigurationAsSaved();
     } catch (error) {
         console.error('Failed to load gift configuration:', error);
         currentGiftMappings = { ...DEFAULT_GIFT_MAPPINGS };
+        markConfigurationAsSaved();
     }
 }
 
 function resetGiftConfiguration() {
     currentGiftMappings = { ...DEFAULT_GIFT_MAPPINGS };
-    saveGiftConfiguration();
+    // Mark all gifts as changed since we reset everything
+    TIKTOK_GIFTS.forEach(gift => changedGifts.add(gift.id));
+    markConfigurationAsUnsaved();
     renderGiftGrid();
     addLogEntry({
         type: 'info',
-        message: '🔄 Gift configuration reset to defaults',
+        message: '🔄 Gift configuration reset to defaults (unsaved)',
         timestamp: new Date().toISOString()
     });
 }
@@ -711,6 +769,97 @@ async function testGift(giftId) {
         });
         
         showError(`Failed to send test gift: ${error.message}`);
+    }
+}
+
+// Configuration state tracking
+let hasUnsavedChanges = false;
+let changedGifts = new Set();
+
+// Theme Detection and Management
+let currentTheme = 'system'; // 'system', 'light', or 'dark'
+
+function initializeThemeDetection() {
+    // Load saved theme preference
+    const savedTheme = localStorage.getItem('theme-preference') || 'system';
+    currentTheme = savedTheme;
+    
+    // Apply the theme
+    applyTheme(currentTheme);
+    
+    // Update toggle button
+    updateThemeToggleIcon();
+    
+    // Check for system dark mode preference
+    const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    // Listen for system theme changes (only relevant when in system mode)
+    prefersDarkMode.addEventListener('change', (e) => {
+        if (currentTheme === 'system') {
+            updateThemeToggleIcon();
+        }
+    });
+}
+
+function toggleTheme() {
+    // Cycle through: system -> light -> dark -> system
+    switch (currentTheme) {
+        case 'system':
+            currentTheme = 'light';
+            break;
+        case 'light':
+            currentTheme = 'dark';
+            break;
+        case 'dark':
+            currentTheme = 'system';
+            break;
+    }
+    
+    // Apply the new theme
+    applyTheme(currentTheme);
+    updateThemeToggleIcon();
+    
+    // Save preference
+    localStorage.setItem('theme-preference', currentTheme);
+}
+
+function applyTheme(theme) {
+    const root = document.documentElement;
+    
+    if (theme === 'system') {
+        // Remove data-theme attribute to let CSS media queries handle it
+        root.removeAttribute('data-theme');
+    } else {
+        // Set explicit theme
+        root.setAttribute('data-theme', theme);
+    }
+}
+
+function getEffectiveTheme() {
+    if (currentTheme === 'system') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return currentTheme;
+}
+
+function updateThemeToggleIcon() {
+    if (!elements.themeToggle) return;
+    
+    const themeIcon = elements.themeToggle.querySelector('.theme-icon');
+    if (!themeIcon) return;
+    
+    const effectiveTheme = getEffectiveTheme();
+    
+    // Update icon and tooltip based on current theme and mode
+    if (currentTheme === 'system') {
+        themeIcon.textContent = effectiveTheme === 'dark' ? '🌙' : '☀️';
+        elements.themeToggle.title = `Theme: System (${effectiveTheme}) - Click to switch to Light mode`;
+    } else if (currentTheme === 'light') {
+        themeIcon.textContent = '☀️';
+        elements.themeToggle.title = 'Theme: Light - Click to switch to Dark mode';
+    } else {
+        themeIcon.textContent = '🌙';
+        elements.themeToggle.title = 'Theme: Dark - Click to switch to System mode';
     }
 }
 

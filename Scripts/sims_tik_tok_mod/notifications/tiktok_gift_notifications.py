@@ -15,14 +15,14 @@ from sims_tik_tok_mod.tiktok_bridge_client import get_bridge_client
 from sims_tik_tok_mod.sim_character_creator import SimCharacterCreator
 
 # Create a logger for this module
-log = CommonLogRegistry.get().register_log(ModInfo.get_identity(), 'TikTokGiftNotifications')
+log = CommonLogRegistry.get().register_log(ModInfo.get_identity(), 'TikTokActionNotifications')
 log.enable()
 
-class TikTokGiftNotifications:
-    """Handles TikTok gift notifications in Sims 4"""
+class TikTokActionNotifications:
+    """Handles TikTok action notifications in Sims 4"""
     
-    # Gift mappings - you can customize these actions
-    GIFT_ACTIONS = {
+    # Action mappings - you can customize these actions
+    ACTION_DESCRIPTIONS = {
         'rose': '💐 Added §500 to household funds!',
         'popular vote': '🗳️ Popularity boost!',
         'go popular': '🗳️ Popularity boost!',
@@ -51,8 +51,8 @@ class TikTokGiftNotifications:
         
         # Get the bridge client and set up the callbacks
         bridge_client = get_bridge_client()
-        bridge_client.set_gift_callback(TikTokGiftNotifications._handle_gift_event)
-        bridge_client.set_like_callback(TikTokGiftNotifications._handle_like_event)
+        bridge_client.set_action_callback(TikTokActionNotifications._handle_action_event)
+        bridge_client.set_like_callback(TikTokActionNotifications._handle_like_event)
 
         # Start the bridge client
         if bridge_client.start():
@@ -68,51 +68,58 @@ class TikTokGiftNotifications:
         bridge_client.stop()
         
     @staticmethod
-    def _handle_gift_event(gift_data: Dict[str, Any]) -> None:
-        """Handle a gift event from the TikTok bridge"""
+    def _handle_action_event(action_data: Dict[str, Any]) -> None:
+        """Handle a Sims action event from the TikTok bridge"""
         try:
-            user = gift_data.get('user', 'Unknown')
-            gift_name = gift_data.get('giftDisplayName', gift_data.get('gift', 'Unknown'))
-            gift_count = gift_data.get('value', 1)
-            diamond_count = gift_data.get('diamondCount', 0)
+            user = action_data.get('user', 'Unknown')
+            action = action_data.get('action', 'unknown')
+            count = action_data.get('count', 1)
+            context = action_data.get('context', {})
             
-            log.info(f"Gift received: {user} sent {gift_name} (x{gift_count})")
+            # Extract gift context for logging and notifications
+            gift_name = context.get('giftName', 'Unknown Gift')
+            diamond_count = context.get('diamondCount', 0)
+            is_manual = context.get('isManual', False)
             
-            # Get the action for this gift
-            gift_key = gift_name.lower()
-            action = TikTokGiftNotifications.GIFT_ACTIONS.get(gift_key, 
-                     TikTokGiftNotifications.GIFT_ACTIONS['default'])
+            log.info(f"Sims action received: {user} -> {action} (from {gift_name}, x{count})")
+            
+            # Handle sim creation action
+            if action == 'create_sim':
+                SimCharacterCreator.process_gift_data(action_data)
+                return
+            
+            # Get the action description for notifications
+            action_description = TikTokActionNotifications.ACTION_DESCRIPTIONS.get(action, 
+                                TikTokActionNotifications.ACTION_DESCRIPTIONS['default'])
             
             # Create the notification title and description
-            title = "TikTok Gift Received!"
+            title = "TikTok Action Triggered!"
             
-            if gift_count > 1:
-                description = f"{user} sent {gift_count} x {gift_name}!\n{action}"
+            if count > 1:
+                description = f"{user} triggered {count} x {action}!\n{action_description}"
             else:
-                description = f"{user} sent {gift_name}!\n{action}"
+                description = f"{user} triggered {action}!\n{action_description}"
                 
             if diamond_count > 0:
-                description += f"\nWorth {diamond_count} diamonds"
+                description += f"\nFrom {gift_name} ({diamond_count} diamonds)"
+            elif gift_name != 'Unknown Gift':
+                description += f"\nFrom {gift_name}"
+                
+            if is_manual:
+                description += "\n(Manual test)"
             
             # Show the notification in-game (disabled - only showing sim spawned notifications)
-            # TikTokGiftNotifications._show_gift_notification(title, description)
-            
-            # Process gift data for sim character creation
-            SimCharacterCreator.process_gift_data(gift_data)
+            # TikTokActionNotifications._show_gift_notification(title, description)
             
             # Send response back to bridge (optional)
             bridge_client = get_bridge_client()
-            bridge_client.send_response(gift_data, action)
+            bridge_client.send_response(action_data, action_description)
             
-            # TODO: Here you can add actual game effects based on the gift
-            # For example:
-            # - Add money to household funds
-            # - Apply buffs to Sims
-            # - Trigger events in the game
-            # TikTokGiftNotifications._apply_gift_effect(gift_key, gift_count)
+            # Apply the actual game effect based on the action
+            TikTokActionNotifications._apply_action_effect(action, count, context)
             
         except Exception as e:
-            log.error(f"Error handling gift event: {e}")
+            log.error(f"Error handling Sims action event: {e}")
             
     @staticmethod
     def _handle_like_event(like_data: Dict[str, Any]) -> None:
@@ -124,10 +131,10 @@ class TikTokGiftNotifications:
             log.info(f"Like received: {user} liked (total: {like_count})")
             
             # Clean up expired likes first
-            TikTokGiftNotifications._cleanup_expired_likes()
+            TikTokActionNotifications._cleanup_expired_likes()
             
             # Accumulate likes for this user
-            TikTokGiftNotifications._accumulate_likes(user, like_count)
+            TikTokActionNotifications._accumulate_likes(user, like_count)
             
         except Exception as e:
             log.error(f"Error handling like event: {e}")
@@ -141,7 +148,7 @@ class TikTokGiftNotifications:
                 description
             )
             notification.show()
-            log.debug(f"[TikTokGiftNotifications] Showed notification: {title}")
+            log.debug(f"[TikTokActionNotifications] Showed notification: {title}")
             
         except Exception as e:
             log.error(f"Error showing gift notification: {e}")
@@ -153,23 +160,23 @@ class TikTokGiftNotifications:
             current_time = time.time()
             
             # Initialize user data if not exists
-            if user not in TikTokGiftNotifications._like_accumulator:
-                TikTokGiftNotifications._like_accumulator[user] = {
+            if user not in TikTokActionNotifications._like_accumulator:
+                TikTokActionNotifications._like_accumulator[user] = {
                     'total_likes': 0,
                     'first_like_time': current_time,
                     'last_like_time': current_time
                 }
             
-            user_data = TikTokGiftNotifications._like_accumulator[user]
+            user_data = TikTokActionNotifications._like_accumulator[user]
             
             # Add likes to accumulator
             user_data['total_likes'] += like_count
             user_data['last_like_time'] = current_time
             
-            log.info(f"[TikTokGiftNotifications] User {user} now has {user_data['total_likes']} accumulated likes")
+            log.info(f"[TikTokActionNotifications] User {user} now has {user_data['total_likes']} accumulated likes")
             
             # Check if we should trigger a reward
-            TikTokGiftNotifications._check_and_trigger_like_reward(user, user_data)
+            TikTokActionNotifications._check_and_trigger_like_reward(user, user_data)
             
         except Exception as e:
             log.error(f"Error accumulating likes: {e}")
@@ -183,15 +190,15 @@ class TikTokGiftNotifications:
             time_since_first = current_time - user_data['first_like_time']
             
             # Check if threshold reached or timeout elapsed
-            should_trigger = (total_likes >= TikTokGiftNotifications.LIKES_THRESHOLD or 
-                            time_since_first >= TikTokGiftNotifications.LIKES_TIMEOUT)
+            should_trigger = (total_likes >= TikTokActionNotifications.LIKES_THRESHOLD or 
+                            time_since_first >= TikTokActionNotifications.LIKES_TIMEOUT)
             
             if should_trigger:
                 # Trigger reward
-                TikTokGiftNotifications._trigger_like_reward(user, total_likes)
+                TikTokActionNotifications._trigger_like_reward(user, total_likes)
                 
                 # Reset accumulator for this user
-                del TikTokGiftNotifications._like_accumulator[user]
+                del TikTokActionNotifications._like_accumulator[user]
                 
         except Exception as e:
             log.error(f"Error checking like reward trigger: {e}")
@@ -201,15 +208,15 @@ class TikTokGiftNotifications:
         """Trigger the simoleon reward for accumulated likes"""
         try:
             # Add simoleons (1 per like)
-            TikTokGiftNotifications._add_simoleons_for_like(total_likes)
+            TikTokActionNotifications._add_simoleons_for_like(total_likes)
             
             # Create and show notification
             title = "TikTok Like Milestone!"
             description = f"{user} reached {total_likes} likes!\nAdded §{total_likes} to household funds!"
             
-            # TikTokGiftNotifications._show_gift_notification(title, description)  # Disabled - only showing sim spawned notifications
+            # TikTokActionNotifications._show_gift_notification(title, description)  # Disabled - only showing sim spawned notifications
             
-            log.info(f"[TikTokGiftNotifications] Triggered reward for {user}: {total_likes} likes = §{total_likes}")
+            log.info(f"[TikTokActionNotifications] Triggered reward for {user}: {total_likes} likes = §{total_likes}")
             
         except Exception as e:
             log.error(f"Error triggering like reward: {e}")
@@ -233,9 +240,9 @@ class TikTokGiftNotifications:
             )
             
             if result:
-                log.info(f"[TikTokGiftNotifications] Added §{amount_to_add} to household funds for {like_count} like(s)")
+                log.info(f"[TikTokActionNotifications] Added §{amount_to_add} to household funds for {like_count} like(s)")
             else:
-                log.error(f"[TikTokGiftNotifications] Failed to add simoleons: {result.reason}")
+                log.error(f"[TikTokActionNotifications] Failed to add simoleons: {result.reason}")
                 
         except Exception as e:
             log.error(f"Error adding simoleons for like: {e}")
@@ -247,48 +254,50 @@ class TikTokGiftNotifications:
             current_time = time.time()
             expired_users = []
             
-            for user, user_data in TikTokGiftNotifications._like_accumulator.items():
+            for user, user_data in TikTokActionNotifications._like_accumulator.items():
                 time_since_first = current_time - user_data['first_like_time']
-                if time_since_first >= TikTokGiftNotifications.LIKES_TIMEOUT:
+                if time_since_first >= TikTokActionNotifications.LIKES_TIMEOUT:
                     expired_users.append(user)
             
             # Trigger rewards for expired users
             for user in expired_users:
-                user_data = TikTokGiftNotifications._like_accumulator[user]
+                user_data = TikTokActionNotifications._like_accumulator[user]
                 total_likes = user_data['total_likes']
                 if total_likes > 0:
-                    TikTokGiftNotifications._trigger_like_reward(user, total_likes)
-                del TikTokGiftNotifications._like_accumulator[user]
+                    TikTokActionNotifications._trigger_like_reward(user, total_likes)
+                del TikTokActionNotifications._like_accumulator[user]
                 
             if expired_users:
-                log.info(f"[TikTokGiftNotifications] Cleaned up {len(expired_users)} expired like accumulations")
+                log.info(f"[TikTokActionNotifications] Cleaned up {len(expired_users)} expired like accumulations")
                 
         except Exception as e:
             log.error(f"Error cleaning up expired likes: {e}")
-            
+
     @staticmethod
-    def _apply_gift_effect(gift_key: str, count: int) -> None:
-        """Apply the actual game effect for a gift (to be implemented)"""
-        # TODO: Implement actual game effects here
+    def _apply_action_effect(action: str, count: int, context: Dict[str, Any]) -> None:
+        """Apply the actual game effect for a Sims action"""
+        # TODO: Implement actual game effects here based on the action
         # This is where you would add money, apply buffs, break objects, etc.
         
-        log.info(f"TODO: Apply effect for gift '{gift_key}' x{count}")
+        log.info(f"TODO: Apply effect for action '{action}' x{count}")
         
         # Example implementations:
-        # if gift_key == 'rose':
-        #     # Add money to household
+        # if action == 'flirt':
+        #     # Apply flirty buff to all sims in household
+        #     for sim in CommonSimUtils.get_sim_instances_for_household():
+        #         CommonBuffUtils.add_buff(sim, CommonBuffId.FLIRTY)
+        #         log.info(f"Applied flirty buff to {sim.first_name}")
+        #
+        # elif action == 'give_money':
+        #     # Add money to household funds
         #     active_household = CommonHouseholdUtils.get_active_household()
         #     if active_household:
-        #         active_household.funds.add(500 * count)
-        #         
-        # elif gift_key == 'heart':
-        #     # Apply happy buff to active sim
-        #     active_sim = CommonSimUtils.get_active_sim()
-        #     if active_sim:
-        #         # Add happy buff (you'd need to find the correct buff ID)
-        #         pass
-        #         
-        # elif gift_key == 'gg':
-        #     # Break a random object in the house
-        #     # Find objects and set them to broken state
+        #         amount = context.get('diamondCount', 10) * 10  # 10 simoleons per diamond
+        #         active_household.funds.try_add_funds(amount * count)
+        #         log.info(f"Added {amount * count} simoleons")
+        #
+        # elif action == 'break_object':
+        #     # Find and break a random object
+        #     # Implementation would go here
         #     pass
+        pass

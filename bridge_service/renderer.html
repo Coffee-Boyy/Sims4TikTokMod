@@ -10,7 +10,12 @@
     <div class="container">
         <!-- Header -->
         <header class="header">
-            <h1 class="title">The Sims 4 - TikTok</h1>
+            <div class="header-content">
+                <h1 class="title">The Sims 4 - TikTok</h1>
+                <button id="theme-toggle" class="theme-toggle" title="Toggle light/dark mode">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
         </header>
 
         <!-- Main Content -->
@@ -25,8 +30,6 @@
                     <input type="text" id="username" placeholder="Enter TikTok username (without @)" value="hanhan52052">
                     <small class="help-text">Enter the TikTok username you want to connect to</small>
                 </div>
-
-
 
                 <div class="button-group">
                     <button id="start-btn" class="btn btn-primary">Start Bridge</button>
@@ -63,6 +66,7 @@
                         <h2 class="panel-title">Gift Interaction Configuration</h2>
                     </div>
                     <div class="config-controls">
+                        <span id="unsaved-changes-label" class="unsaved-changes-label" style="display: none;"></span>
                         <button id="save-config-btn" class="btn btn-secondary btn-small">Save Configuration</button>
                         <button id="reset-config-btn" class="btn btn-danger btn-small">Reset to Defaults</button>
                     </div>

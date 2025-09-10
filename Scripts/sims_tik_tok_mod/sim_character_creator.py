@@ -64,27 +64,30 @@ class SimCharacterCreator:
         log.info("✅ Sim Character Creator initialized")
         
     @classmethod
-    def process_gift_data(cls, gift_data: Dict[str, Any]) -> None:
-        """Process gift data from bridge service"""
+    def process_gift_data(cls, action_data: Dict[str, Any]) -> None:
+        """Process Sims action data from bridge service"""
         try:
-            user = gift_data.get('user', 'Unknown')
+            user = action_data.get('user', 'Unknown')
             if user is None:
                 user = 'Unknown'
             
-            diamond_tracking = gift_data.get('diamondTracking')
-            appearance_analysis = gift_data.get('appearanceAnalysis')
+            action = action_data.get('action', 'unknown')
+            context = action_data.get('context', {})
             
-            # Check if bridge service indicates we should create a sim
-            if diamond_tracking and diamond_tracking.get('shouldCreateSim', False):
-                log.info(f"Bridge service indicates sim creation needed for {user}")
-                cls._create_sim_for_user(user, appearance_analysis, diamond_tracking)
-            elif diamond_tracking:
-                # Just log the diamond progress
-                total_diamonds = diamond_tracking.get('totalDiamonds', 0)
-                log.info(f"User {user} has {total_diamonds} accumulated diamonds")
+            # Only handle create_sim actions
+            if action != 'create_sim':
+                log.debug(f"Ignoring non-sim-creation action: {action}")
+                return
+            
+            diamond_tracking = context.get('diamondTracking')
+            appearance_analysis = context.get('appearanceAnalysis')
+            
+            # Create the sim - the bridge service already determined we should create one
+            log.info(f"Creating sim for {user} based on bridge service action")
+            cls._create_sim_for_user(user, appearance_analysis, diamond_tracking)
                 
         except Exception as e:
-            log.error(f"Error processing gift data: {e}")
+            log.error(f"Error processing Sims action data: {e}")
     
     @classmethod
     def _create_sim_for_user(cls, user: str, appearance_analysis: Optional[Dict[str, Any]], diamond_tracking: Dict[str, Any]) -> None:

@@ -50,46 +50,48 @@ class TestClient {
                 console.log(`📡 ${event.message}`);
                 break;
                 
-            case 'gift':
-                console.log('🎁 GIFT EVENT RECEIVED:');
+            case 'sims_action':
+                console.log('🎮 SIMS ACTION RECEIVED:');
                 console.log(`   👤 User: ${event.user}`);
-                console.log(`   🎁 Gift: ${event.giftDisplayName || event.gift}`);
-                console.log(`   🔢 Count: ${event.value}`);
-                console.log(`   💎 Diamonds: ${event.diamondCount}`);
-                console.log(`   🆔 Gift ID: ${event.giftId}`);
-                console.log(`   📝 Description: ${event.description || 'N/A'}`);
+                console.log(`   🎯 Action: ${event.action}`);
+                console.log(`   🔢 Count: ${event.count}`);
+                console.log(`   📝 Context: ${JSON.stringify(event.context, null, 2)}`);
                 console.log(`   ⏰ Time: ${event.timestamp}`);
                 
                 // Simulate Sims 4 mod response
                 this.simulateSimsResponse(event);
                 break;
                 
+                
             default:
                 console.log(`📨 Unknown event type: ${event.type}`, event);
         }
     }
     
-    simulateSimsResponse(giftEvent) {
-        // Simulate what the Sims 4 mod might do with this gift
-        const giftMappings = config.giftMappings || {};
-        const action = giftMappings[giftEvent.gift] || 'No action mapped for this gift';
+    simulateSimsResponse(actionEvent) {
+        // Simulate what the Sims 4 mod might do with this action
+        const action = actionEvent.action;
+        const context = actionEvent.context || {};
+        const giftName = context.giftName || 'Unknown';
         
-        console.log(`   🎮 Sims 4 Action: ${action}`);
+        console.log(`   🎮 Sims 4 Processing: ${action}`);
+        console.log(`   📄 From Gift: ${giftName}`);
         console.log('--------------------------------------------------');
         
-        // Optionally send a response back to the bridge
+        // Send a response back to the bridge (optional)
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             const response = {
                 type: 'response',
-                giftProcessed: giftEvent.gift,
-                user: giftEvent.user,
-                action: action,
+                actionProcessed: action,
+                user: actionEvent.user,
+                context: context,
                 timestamp: new Date().toISOString()
             };
             
             this.ws.send(JSON.stringify(response));
         }
     }
+    
     
     disconnect() {
         if (this.ws) {

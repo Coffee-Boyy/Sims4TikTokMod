@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * Test script for Sim Character Creation Pipeline
+ * NOTE: This test file uses legacy gift format and needs to be updated to use sims_action format
  * Sends test gift events to the bridge service to test the sim creation functionality
  */
 
@@ -48,14 +49,14 @@ class SimCreationTester {
         });
     }
 
-    sendTestGiftEvent(giftData) {
+    sendTestActionEvent(actionData) {
         if (!this.isConnected) {
             console.error('❌ Not connected to bridge service');
             return;
         }
 
-        console.log(`📤 Sending test gift event:`, giftData);
-        this.ws.send(JSON.stringify(giftData));
+        console.log(`📤 Sending test action event:`, actionData);
+        this.ws.send(JSON.stringify(actionData));
     }
 
     async runTests() {
@@ -64,18 +65,20 @@ class SimCreationTester {
             
             console.log('\n🧪 Starting Sim Creation Tests...\n');
             
-            // Test 1: User with small diamond gift (should not trigger sim creation)
-            console.log('Test 1: Small diamond gift (should not trigger sim creation)');
-            this.sendTestGiftEvent({
-                type: 'gift',
+            // Test 1: User with small diamond gift action (should not trigger sim creation)
+            console.log('Test 1: Small diamond gift action (should not trigger sim creation)');
+            this.sendTestActionEvent({
+                type: 'sims_action',
                 user: 'test_user_1',
-                gift: 'diamond',
-                giftDisplayName: 'Diamond',
-                value: 1,
-                giftId: 12345,
-                diamondCount: 200,
-                description: 'A small diamond gift',
-                profilePictureUrl: 'https://via.placeholder.com/150/FF6B6B/FFFFFF?text=User1',
+                action: 'give_money',
+                count: 1,
+                context: {
+                    giftName: 'Diamond',
+                    giftId: 12345,
+                    diamondCount: 200,
+                    profilePictureUrl: 'https://via.placeholder.com/150/FF6B6B/FFFFFF?text=User1',
+                    isManual: false
+                },
                 timestamp: new Date().toISOString()
             });
             

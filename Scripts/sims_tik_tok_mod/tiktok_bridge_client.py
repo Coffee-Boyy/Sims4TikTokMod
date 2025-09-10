@@ -33,8 +33,8 @@ class TikTokBridgeClient:
         self.is_running = False
         self.connection_thread: Optional[threading.Thread] = None
         
-        # Callback for when gift events are received
-        self.on_gift_callback: Optional[Callable[[Dict[str, Any]], None]] = None
+        # Callback for when action events are received
+        self.on_action_callback: Optional[Callable[[Dict[str, Any]], None]] = None
         
         # Callback for when like events are received
         self.on_like_callback: Optional[Callable[[Dict[str, Any]], None]] = None
@@ -46,9 +46,15 @@ class TikTokBridgeClient:
         self.current_retries = 0
         self.last_retry_time = 0  # timestamp of last retry attempt
         
-    def set_gift_callback(self, callback: Callable[[Dict[str, Any]], None]) -> None:
-        """Set the callback function to be called when gift events are received"""
-        self.on_gift_callback = callback
+        # Auto-reconnection settings
+        self.auto_reconnect_enabled = True
+        self.auto_reconnect_interval = 30  # seconds
+        self.auto_reconnect_thread: Optional[threading.Thread] = None
+        self.last_successful_connection = 0  # timestamp of last successful connection
+        
+    def set_action_callback(self, callback: Callable[[Dict[str, Any]], None]) -> None:
+        """Set the callback function to be called when action events are received"""
+        self.on_action_callback = callback
         
     def set_like_callback(self, callback: Callable[[Dict[str, Any]], None]) -> None:
         """Set the callback function to be called when like events are received"""
@@ -75,6 +81,11 @@ class TikTokBridgeClient:
         self.connection_thread = threading.Thread(target=self._run_connection, daemon=True)
         self.connection_thread.start()
         
+        # Start auto-reconnection monitor thread
+        if self.auto_reconnect_enabled:
+            self.auto_reconnect_thread = threading.Thread(target=self._auto_reconnect_monitor, daemon=True)
+            self.auto_reconnect_thread.start()
+        
         return True
         
     def stop(self) -> None:
@@ -87,6 +98,9 @@ class TikTokBridgeClient:
             
         if self.connection_thread and self.connection_thread.is_alive():
             self.connection_thread.join(timeout=5)
+            
+        if self.auto_reconnect_thread and self.auto_reconnect_thread.is_alive():
+            self.auto_reconnect_thread.join(timeout=2)
             
     def _run_connection(self) -> None:
         """Run the WebSocket connection with automatic reconnection"""
@@ -155,6 +169,7 @@ class TikTokBridgeClient:
         log.info("[TikTokBridge] ✅ Connected to TikTok bridge!")
         self.is_connected = True
         self.current_retries = 0  # Reset retry counter on successful connection
+        self.last_successful_connection = time.time()  # Track successful connection time
         
     def _on_message(self, ws, message: str) -> None:
         """Called when a message is received from the bridge"""
@@ -164,14 +179,16 @@ class TikTokBridgeClient:
             
             log.debug(f"Received event: {event_type}")
             
-            if event_type == 'gift' and self.on_gift_callback:
-                # Call the gift callback
-                self.on_gift_callback(data)
+            if event_type == 'sims_action' and self.on_action_callback:
+                # Call the action callback
+                self.on_action_callback(data)
             elif event_type == 'like' and self.on_like_callback:
                 # Call the like callback
                 self.on_like_callback(data)
             elif event_type == 'connection':
                 log.info(f"Bridge connection message: {data.get('message', '')}")
+            else:
+                log.debug(f"Unhandled event type: {event_type}")
                 
         except json.JSONDecodeError as e:
             log.error(f"Failed to parse message from bridge: {e}")
@@ -205,24 +222,80 @@ class TikTokBridgeClient:
         
         self.is_connected = False
         
-    def send_response(self, gift_data: Dict[str, Any], action: str) -> None:
+    def send_response(self, action_data: Dict[str, Any], action_description: str) -> None:
         """Send a response back to the bridge (optional)"""
         if not self.is_connected or not self.ws:
             return
             
         response = {
             'type': 'response',
-            'giftProcessed': gift_data.get('gift', 'unknown'),
-            'user': gift_data.get('user', 'unknown'),
-            'action': action,
+            'actionProcessed': action_data.get('action', 'unknown'),
+            'user': action_data.get('user', 'unknown'),
+            'description': action_description,
             'timestamp': time.strftime('%Y-%m-%dT%H:%M:%S.000Z', time.gmtime())
         }
         
         try:
             self.ws.send(json.dumps(response))
-            log.debug(f"[TikTokBridge] Sent response to bridge: {action}")
+            log.debug(f"[TikTokBridge] Sent response to bridge: {action_description}")
         except Exception as e:
             log.error(f"Failed to send response to bridge: {e}")
+    
+    def force_reconnect(self) -> bool:
+        """Force a reconnection attempt"""
+        log.info("[TikTokBridge] 🔄 Forcing reconnection to bridge service...")
+        
+        # Close current connection if it exists
+        if self.ws:
+            try:
+                self.ws.close()
+            except:
+                pass
+        
+        self.is_connected = False
+        self.current_retries = 0
+        
+        # Start a new connection attempt
+        if not self.is_running:
+            return self.start()
+        else:
+            # If already running, the auto-reconnect will handle it
+            log.info("[TikTokBridge] Reconnection will be handled by auto-reconnect system")
+            return True
+    
+    def _auto_reconnect_monitor(self) -> None:
+        """Monitor connection and attempt reconnection every 30 seconds if disconnected"""
+        log.info("[TikTokBridge] 🔄 Auto-reconnection monitor started (checking every 30 seconds)")
+        
+        while self.is_running:
+            try:
+                time.sleep(self.auto_reconnect_interval)
+                
+                if not self.is_running:
+                    break
+                
+                # Check if we're disconnected
+                if not self.is_connected:
+                    current_time = time.time()
+                    time_since_last_connection = current_time - self.last_successful_connection
+                    
+                    # Only attempt reconnection if we've been disconnected for at least 5 seconds
+                    # and it's been at least 30 seconds since last successful connection
+                    if time_since_last_connection >= 5:
+                        log.info("[TikTokBridge] 🔄 Auto-reconnection: Attempting to reconnect...")
+                        
+                        # Reset retries for auto-reconnection attempt
+                        self.current_retries = 0
+                        
+                        # The main connection loop will handle the actual reconnection
+                        if not self.connection_thread or not self.connection_thread.is_alive():
+                            self.connection_thread = threading.Thread(target=self._run_connection, daemon=True)
+                            self.connection_thread.start()
+                    
+            except Exception as e:
+                log.error(f"[TikTokBridge] Error in auto-reconnect monitor: {e}")
+                
+        log.info("[TikTokBridge] Auto-reconnection monitor stopped")
 
 
 # Global instance

@@ -113,13 +113,13 @@ class TikTokBridgeService {
         
         this.tiktokConnection.on('error', (err) => {
             // Check if this is just a fallback warning, not a fatal error
-            const errorMessage = err?.message || err?.toString() || '';
             const isWarning = err?.info && err.info.includes('falling back');
             
             if (isWarning) {
                 this.log(`⚠️  TikTok connection warning: ${err.info}`, 'warning');
             } else {
-                this.log(`❌ TikTok connection error: ${err}`, 'error');
+                const errorMessage = err?.message || err?.toString?.() || JSON.stringify(err) || 'Unknown error';
+                this.log(`❌ TikTok connection error: ${errorMessage}`, 'error');
                 this.handleTikTokError(err);
             }
         });
@@ -215,7 +215,7 @@ class TikTokBridgeService {
         this.lastSentTime = currentTime;
         this.eventsThisMinute++;
         
-        // Create event payload for Sims 4 mod - using actual API structure
+        // Extract gift information from TikTok API
         const giftName = data.giftDetails?.giftName || data.extendedGiftInfo?.name || data.giftName || 'unknown';
         const repeatCount = data.repeatCount || data.comboCount || data.groupCount || 1;
         const giftId = data.giftId || data.giftDetails?.id || data.extendedGiftInfo?.id || 0;
@@ -227,59 +227,86 @@ class TikTokBridgeService {
                                  data.user?.avatarLarger?.urlList?.[0] || 
                                  null;
 
+        // Look up the mapped Sims interaction for this gift
+        const giftKey = giftName.toLowerCase();
+        const simsInteraction = this.giftMappings[giftKey] || this.giftMappings[giftId] || 'none';
+        
+        // Only send to mod if there's a mapped interaction
+        if (simsInteraction === 'none') {
+            this.log(`⚠️  No Sims interaction mapped for gift: ${giftName} (ID: ${giftId})`, 'warning');
+            return;
+        }
+
+        // Create simplified payload for Sims 4 mod - only contains action information
         const payload = {
-            type: 'gift',
+            type: 'sims_action',
             user: username,
-            gift: giftName.toLowerCase(),
-            giftDisplayName: giftName, // Keep original case for display
-            value: repeatCount,
-            giftId: giftId,
-            diamondCount: diamondCount,
-            description: data.giftDetails?.describe || data.extendedGiftInfo?.describe || '',
-            profilePictureUrl: profilePictureUrl,
+            action: simsInteraction,
+            count: repeatCount,
+            // Optional: keep some gift context for logging/debugging
+            context: {
+                giftName: giftName,
+                giftId: giftId,
+                diamondCount: diamondCount,
+                profilePictureUrl: profilePictureUrl
+            },
             timestamp: new Date().toISOString()
         };
         
-        // Process diamond tracking
+        // Process diamond tracking and sim creation
         if (diamondCount > 0) {
             this.processDiamondTracking(username, diamondCount, profilePictureUrl)
                 .then(result => {
+                    let shouldCreateSim = false;
                     if (result) {
-                        payload.diamondTracking = result;
+                        shouldCreateSim = result.shouldCreateSim || false;
                         this.log(`💎 Diamond tracking for ${username}: ${JSON.stringify(result)}`, 'diamond');
                     }
                     
                     // If this gift has diamonds and a profile picture, analyze the appearance
                     if (profilePictureUrl && this.aiEnabled) {
-                        return this.analyzeUserAppearance(username);
+                        return this.analyzeUserAppearance(username).then(appearanceData => {
+                            return { shouldCreateSim, diamondTracking: result, appearanceAnalysis: appearanceData };
+                        });
                     }
-                    return null;
+                    return { shouldCreateSim, diamondTracking: result, appearanceAnalysis: null };
                 })
-                .then(appearanceData => {
-                    if (appearanceData) {
-                        payload.appearanceAnalysis = appearanceData;
-                        this.log(`🎨 Analyzed appearance for ${username}: ${JSON.stringify(appearanceData)}`, 'ai');
+                .then(processedData => {
+                    // Send sim creation action if needed
+                    if (processedData.shouldCreateSim) {
+                        const simCreationPayload = {
+                            type: 'sims_action',
+                            user: username,
+                            action: 'create_sim',
+                            count: 1,
+                            context: {
+                                giftName: giftName,
+                                giftId: giftId,
+                                diamondCount: diamondCount,
+                                profilePictureUrl: profilePictureUrl,
+                                diamondTracking: processedData.diamondTracking,
+                                appearanceAnalysis: processedData.appearanceAnalysis
+                            },
+                            timestamp: new Date().toISOString()
+                        };
+                        this.broadcastToClients(simCreationPayload);
+                        this.log(`📤 Sim creation action sent: ${username} -> create_sim`, 'gift');
                     }
-                    // Send the payload with all data
+                    
+                    // Send the gift action
                     this.broadcastToClients(payload);
+                    this.log(`📤 Sims action sent: ${username} -> ${simsInteraction} (from ${giftName}, ${diamondCount} 💎)`, 'gift');
                 })
                 .catch(error => {
                     this.log(`❌ Error processing gift for ${username}: ${error.message}`, 'error');
-                    // Send payload without additional data
+                    // Still send the gift action even if diamond tracking fails
                     this.broadcastToClients(payload);
+                    this.log(`📤 Sims action sent: ${username} -> ${simsInteraction} (from ${giftName}, ${diamondCount} 💎)`, 'gift');
                 });
         } else {
-            // Send payload immediately if no diamonds
+            // No diamonds, send gift action immediately
             this.broadcastToClients(payload);
-        }
-        
-        this.log(`🎁 Processing gift: ${payload.user} sent "${payload.giftDisplayName}" (x${payload.value}) [${payload.diamondCount} 💎]`, 'gift');
-        
-        // Check for gift mapping and add interaction data
-        const giftKey = payload.gift.toLowerCase();
-        if (this.giftMappings[giftKey] && this.giftMappings[giftKey] !== 'none') {
-            payload.simsInteraction = this.giftMappings[giftKey];
-            this.log(`🎭 Mapped to Sims interaction: ${this.giftMappings[giftKey]}`, 'info');
+            this.log(`📤 Sims action sent: ${username} -> ${simsInteraction} (from ${giftName})`, 'gift');
         }
     }
     
@@ -588,24 +615,27 @@ If you cannot determine an attribute, use reasonable defaults.`;
                 profilePictureUrl = 'https://via.placeholder.com/150/4ECDC4/FFFFFF?text=Test';
             }
             
-            // Create the gift data structure
-            const giftData = {
-                type: 'gift',
+            // Create the sim creation action data structure
+            const simCreationData = {
+                type: 'sims_action',
                 user: `${username}_${Math.random().toString(36).substring(2, 15)}`,
-                gift: 'diamond',
-                giftDisplayName: 'Diamond',
-                value: 1,
-                giftId: 99999,
-                diamondCount: this.diamondThreshold,
-                description: 'Manual test gift',
-                timestamp: new Date().toISOString(),
-                diamondTracking: fakeDiamondTracking,
-                appearanceAnalysis: appearanceAnalysis
+                action: 'create_sim',
+                count: 1,
+                context: {
+                    giftName: 'Diamond',
+                    giftId: 99999,
+                    diamondCount: this.diamondThreshold,
+                    profilePictureUrl: profilePictureUrl,
+                    diamondTracking: fakeDiamondTracking,
+                    appearanceAnalysis: appearanceAnalysis,
+                    isManual: true
+                },
+                timestamp: new Date().toISOString()
             };
             
-            // Send the event to connected clients (same format as real gifts)
-            this.log(`📤 Sending sim creation event for ${username}`, 'manual');
-            this.broadcastToClients(giftData);
+            // Send the event to connected clients
+            this.log(`📤 Sending sim creation action for ${username}`, 'manual');
+            this.broadcastToClients(simCreationData);
             
             this.log(`✅ Sim creation event sent for ${username}`, 'success');
             
@@ -614,27 +644,29 @@ If you cannot determine an attribute, use reasonable defaults.`;
             
             // Fallback: send with default appearance
             const fallbackData = {
-                type: 'gift',
+                type: 'sims_action',
                 user: username,
-                gift: 'diamond',
-                giftDisplayName: 'Diamond',
-                value: 1,
-                giftId: 99999,
-                diamondCount: this.diamondThreshold,
-                description: 'Manual test gift (fallback)',
-                profilePictureUrl: 'https://via.placeholder.com/150/4ECDC4/FFFFFF?text=Test',
-                timestamp: new Date().toISOString(),
-                diamondTracking: {
-                    totalDiamonds: this.diamondThreshold,
-                    thresholdReached: true,
-                    shouldCreateSim: true,
-                    timeRemaining: 3600
+                action: 'create_sim',
+                count: 1,
+                context: {
+                    giftName: 'Diamond',
+                    giftId: 99999,
+                    diamondCount: this.diamondThreshold,
+                    profilePictureUrl: 'https://via.placeholder.com/150/4ECDC4/FFFFFF?text=Test',
+                    diamondTracking: {
+                        totalDiamonds: this.diamondThreshold,
+                        thresholdReached: true,
+                        shouldCreateSim: true,
+                        timeRemaining: 3600
+                    },
+                    appearanceAnalysis: this.getDefaultAppearance(),
+                    isManual: true
                 },
-                appearanceAnalysis: this.getDefaultAppearance()
+                timestamp: new Date().toISOString()
             };
             
             this.broadcastToClients(fallbackData);
-            this.log(`✅ Fallback sim creation event sent for ${username}`, 'success');
+            this.log(`✅ Fallback sim creation action sent for ${username}`, 'success');
         }
     }
     
@@ -643,43 +675,40 @@ If you cannot determine an attribute, use reasonable defaults.`;
         
         this.log(`🎮 Sending manual gift: ${username} sent ${giftName} (${diamondCount} diamonds)`, 'manual');
         
-        // Create gift event payload in the same format as real TikTok events
+        // Look up the mapped Sims interaction for this gift
+        const giftKey = giftName.toLowerCase();
+        const mappedInteraction = simsInteraction || this.giftMappings[giftKey] || this.giftMappings[giftId] || 'none';
+        
+        // Only send to mod if there's a mapped interaction
+        if (mappedInteraction === 'none') {
+            this.log(`⚠️  No Sims interaction mapped for manual gift: ${giftName} (ID: ${giftId})`, 'warning');
+            return;
+        }
+
+        // Create simplified payload for Sims 4 mod - only contains action information
         const payload = {
-            type: 'gift',
+            type: 'sims_action',
             user: username,
-            gift: giftName.toLowerCase(),
-            giftDisplayName: giftName,
-            value: 1,
-            giftId: giftId || Math.floor(Math.random() * 100000),
-            diamondCount: diamondCount,
-            description: `Manual ${giftName} gift (${tier} tier)`,
-            profilePictureUrl: 'https://via.placeholder.com/150/4ECDC4/FFFFFF?text=Manual',
-            timestamp: new Date().toISOString(),
-            tier: tier,
-            icon: icon
+            action: mappedInteraction,
+            count: 1,
+            // Optional: keep some gift context for logging/debugging
+            context: {
+                giftName: giftName,
+                giftId: giftId || Math.floor(Math.random() * 100000),
+                diamondCount: diamondCount,
+                profilePictureUrl: 'https://via.placeholder.com/150/4ECDC4/FFFFFF?text=Manual',
+                tier: tier,
+                icon: icon,
+                isManual: true
+            },
+            timestamp: new Date().toISOString()
         };
         
-        // Add Sims interaction if mapped
-        if (simsInteraction && simsInteraction !== 'none') {
-            payload.simsInteraction = simsInteraction;
-            this.log(`🎭 Mapped to Sims interaction: ${simsInteractionLabel || simsInteraction}`, 'info');
-        }
-        
-        // Check for gift mapping and add interaction data (fallback if not provided)
-        if (!payload.simsInteraction) {
-            const giftKey = payload.gift.toLowerCase();
-            if (this.giftMappings[giftKey] && this.giftMappings[giftKey] !== 'none') {
-                payload.simsInteraction = this.giftMappings[giftKey];
-                this.log(`🎭 Mapped to Sims interaction: ${this.giftMappings[giftKey]}`, 'info');
-            }
-        }
-        
-        // Send the event to connected clients (same format as real gifts)
-        this.log(`📤 Sending manual gift event: ${username} -> ${giftName} (${diamondCount} 💎)`, 'manual');
+        // Send the event to connected clients
+        this.log(`📤 Sending manual Sims action: ${username} -> ${mappedInteraction} (from ${giftName}, ${diamondCount} 💎)`, 'manual');
         this.broadcastToClients(payload);
         
-        const interactionText = payload.simsInteraction ? ` → ${payload.simsInteraction}` : '';
-        this.log(`✅ Manual gift event sent: ${username} -> ${giftName} (${diamondCount} 💎)${interactionText}`, 'success');
+        this.log(`✅ Manual Sims action sent: ${username} -> ${mappedInteraction} (from ${giftName}, ${diamondCount} 💎)`, 'success');
     }
 
     updateGiftMappings(mappings) {

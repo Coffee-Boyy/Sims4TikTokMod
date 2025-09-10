@@ -180,15 +180,20 @@ The bridge sends JSON messages to connected clients (your Sims 4 mod):
 }
 ```
 
-### Gift Event
+### Sims Action Event
 ```json
 {
-  "type": "gift",
+  "type": "sims_action",
   "user": "tiktok_username",
-  "gift": "rose",
-  "value": 5,
-  "giftId": 5655,
-  "diamondCount": 1,
+  "action": "flirt",
+  "count": 5,
+  "context": {
+    "giftName": "Rose",
+    "giftId": 5655,
+    "diamondCount": 1,
+    "profilePictureUrl": "https://...",
+    "isManual": false
+  },
   "timestamp": "2024-01-01T12:00:00.000Z"
 }
 ```
@@ -330,8 +335,8 @@ bridge_service/
 Your Sims 4 mod should:
 
 1. **Connect** to `ws://localhost:8765`
-2. **Listen** for messages with `type: "gift"`
-3. **Process** the gift data to trigger in-game actions
+2. **Listen** for messages with `type: "sims_action"`
+3. **Process** the action data to trigger in-game actions
 4. **Optionally** send responses back to the bridge
 
 Example WebSocket connection in your mod:
@@ -341,8 +346,8 @@ const ws = new WebSocket('ws://localhost:8765');
 
 ws.on('message', (data) => {
     const event = JSON.parse(data);
-    if (event.type === 'gift') {
-        triggerSimsAction(event.gift, event.user, event.value);
+    if (event.type === 'sims_action') {
+        triggerSimsAction(event.action, event.user, event.count);
     }
 });
 ```

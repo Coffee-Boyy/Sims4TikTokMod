@@ -102,13 +102,13 @@ class TikTokBridgeService {
         
         this.tiktokConnection.on('error', (err) => {
             // Check if this is just a fallback warning, not a fatal error
-            const errorMessage = err?.message || err?.toString() || '';
             const isWarning = err?.info && err.info.includes('falling back');
             
             if (isWarning) {
                 console.warn('⚠️  TikTok connection warning:', err.info);
             } else {
-                console.error('❌ TikTok connection error:', err);
+                const errorMessage = err?.message || err?.toString?.() || JSON.stringify(err) || 'Unknown error';
+                console.error('❌ TikTok connection error:', errorMessage);
                 this.handleTikTokError(err);
             }
         });
