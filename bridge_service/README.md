@@ -10,6 +10,7 @@ A Node.js bridge service that connects to TikTok Live streams and forwards gift 
 - 🔍 **Verbose Logging** - Optional detailed logging for debugging
 - 🛡️ **Error Handling** - Comprehensive error handling with helpful debugging tips
 - ⚙️ **Configurable** - Easy configuration via JSON file or command line
+- 💾 **Username Persistence** - Automatically saves and restores the last used TikTok username
 
 ## 📋 Requirements
 

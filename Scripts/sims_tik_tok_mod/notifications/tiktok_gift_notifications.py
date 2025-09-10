@@ -5,9 +5,12 @@ Displays in-game notifications when TikTok gifts are received
 import time
 from typing import Dict, Any
 
+from sims4communitylib.enums.buffs_enum import CommonBuffId
 from sims4communitylib.enums.common_currency_modify_reasons import CommonCurrencyModifyReason
 from sims4communitylib.notifications.common_basic_notification import CommonBasicNotification
 from sims4communitylib.utils.common_log_registry import CommonLogRegistry
+from sims4communitylib.utils.sims.common_buff_utils import CommonBuffUtils
+from sims4communitylib.utils.sims.common_household_utils import CommonHouseholdUtils
 from sims4communitylib.utils.sims.common_sim_currency_utils import CommonSimCurrencyUtils
 from sims4communitylib.utils.sims.common_sim_utils import CommonSimUtils
 from sims_tik_tok_mod.modinfo import ModInfo
@@ -15,7 +18,7 @@ from sims_tik_tok_mod.tiktok_bridge_client import get_bridge_client
 from sims_tik_tok_mod.sim_character_creator import SimCharacterCreator
 
 # Create a logger for this module
-log = CommonLogRegistry.get().register_log(ModInfo.get_identity(), 'TikTokActionNotifications')
+log = CommonLogRegistry.get().register_log(ModInfo.get_identity(), 'TikTokActionNotifications')  # type: ignore[attr-defined]
 log.enable()
 
 class TikTokActionNotifications:
@@ -23,15 +26,16 @@ class TikTokActionNotifications:
     
     # Action mappings - you can customize these actions
     ACTION_DESCRIPTIONS = {
-        'rose': '💐 Added §500 to household funds!',
-        'popular vote': '🗳️ Popularity boost!',
-        'go popular': '🗳️ Popularity boost!',
-        'heart': '❤️ Applied Happy buff for 4 hours!',
-        'gg': '💥 Something broke in the house!',
-        'diamond': '💎 Added §1000 to household funds!',
-        'rocket': '🚀 House is on fire!',
-        'lion': '🦁 Celebrity spotted!',
-        'default': '🎁 Thank you for the gift!'
+        'rose': 'Added 500 simoleons to household funds!',
+        'popular vote': 'Popularity boost activated!',
+        'go popular': 'Popularity boost activated!',
+        'heart': 'Applied Happy buff for 4 hours!',
+        'gg': 'Something broke in the house!',
+        'diamond': 'Added 1000 simoleons to household funds!',
+        'rocket': 'House is on fire!',
+        'lion': 'Celebrity spotted!',
+        'flirty_compliment': 'Applied flirty buff to all household members!',
+        'default': 'Thank you for the gift!'
     }
     
     # Like accumulation settings
@@ -53,12 +57,10 @@ class TikTokActionNotifications:
         bridge_client = get_bridge_client()
         bridge_client.set_action_callback(TikTokActionNotifications._handle_action_event)
         bridge_client.set_like_callback(TikTokActionNotifications._handle_like_event)
+        bridge_client.set_connection_callback(TikTokActionNotifications._handle_connection_event)
 
         # Start the bridge client
-        if bridge_client.start():
-            log.info("✅ TikTok bridge client started successfully")
-        else:
-            log.error("❌ Failed to start TikTok bridge client")
+        bridge_client.start()
             
     @staticmethod
     def shutdown() -> None:
@@ -93,23 +95,16 @@ class TikTokActionNotifications:
                                 TikTokActionNotifications.ACTION_DESCRIPTIONS['default'])
             
             # Create the notification title and description
-            title = "TikTok Action Triggered!"
+            title = f"TikTok Gift from {user}"
             
-            if count > 1:
-                description = f"{user} triggered {count} x {action}!\n{action_description}"
-            else:
-                description = f"{user} triggered {action}!\n{action_description}"
-                
-            if diamond_count > 0:
-                description += f"\nFrom {gift_name} ({diamond_count} diamonds)"
-            elif gift_name != 'Unknown Gift':
-                description += f"\nFrom {gift_name}"
-                
+            # Streamlined description - just the effect
+            description = action_description
+            
+            # Add test indicator if manual
             if is_manual:
-                description += "\n(Manual test)"
+                description += " (Test)"
             
-            # Show the notification in-game (disabled - only showing sim spawned notifications)
-            # TikTokActionNotifications._show_gift_notification(title, description)
+            TikTokActionNotifications._show_gift_notification(title, description)
             
             # Send response back to bridge (optional)
             bridge_client = get_bridge_client()
@@ -140,6 +135,31 @@ class TikTokActionNotifications:
             log.error(f"Error handling like event: {e}")
             
     @staticmethod
+    def _handle_connection_event(is_connected: bool, message: str) -> None:
+        """Handle connection status change events from the TikTok bridge"""
+        try:
+            if is_connected:
+                title = "TikTok Bridge Connected"
+                description = "Successfully connected to TikTok service! Ready to receive gifts and interactions from your stream."
+                log.info(f"TikTok bridge connected: {message}")
+            else:
+                title = "TikTok Bridge Connection Failed"
+                # Use the specific error message from the bridge client, with a fallback
+                if "Make sure the bridge application is running" in message:
+                    description = f"{message} Start the bridge application and try again."
+                elif "bridge service" in message.lower():
+                    description = message
+                else:
+                    description = f"{message} Check the bridge service and try again."
+                log.error(f"TikTok bridge connection failed: {message}")
+            
+            # Show the connection notification in-game
+            TikTokActionNotifications._show_connection_notification(title, description)
+            
+        except Exception as e:
+            log.error(f"Error handling connection event: {e}")
+            
+    @staticmethod
     def _show_gift_notification(title: str, description: str) -> None:
         """Show a gift notification in-game"""
         try:
@@ -152,6 +172,20 @@ class TikTokActionNotifications:
             
         except Exception as e:
             log.error(f"Error showing gift notification: {e}")
+
+    @staticmethod
+    def _show_connection_notification(title: str, description: str) -> None:
+        """Show a connection status notification in-game"""
+        try:
+            notification = CommonBasicNotification(
+                title,
+                description
+            )
+            notification.show()
+            log.debug(f"[TikTokActionNotifications] Showed connection notification: {title}")
+            
+        except Exception as e:
+            log.error(f"Error showing connection notification: {e}")
             
     @staticmethod
     def _accumulate_likes(user: str, like_count: int) -> None:
@@ -276,28 +310,29 @@ class TikTokActionNotifications:
     @staticmethod
     def _apply_action_effect(action: str, count: int, context: Dict[str, Any]) -> None:
         """Apply the actual game effect for a Sims action"""
-        # TODO: Implement actual game effects here based on the action
-        # This is where you would add money, apply buffs, break objects, etc.
+        if action == 'flirty_compliment':
+            # Apply flirty buff to all sims in household
+            applied_count = 0
+            for sim_info in CommonHouseholdUtils.get_sim_info_of_all_sims_in_active_household_generator():
+                result = CommonBuffUtils.add_buff(sim_info, CommonBuffId.FLIRTY_BY_POTION, buff_reason="Flirty Compliment from TikTok")
+                if result:
+                    applied_count += 1
+                    log.info(f"Applied flirty buff to {sim_info.first_name}")
+                else:
+                    log.error(f"Failed to apply flirty buff to {sim_info.first_name}: {result.reason}")
+            log.info(f"Applied flirty buff to {applied_count} household member(s)")
         
-        log.info(f"TODO: Apply effect for action '{action}' x{count}")
+        elif action == 'give_money':
+            # Add money to household funds
+            active_household = CommonHouseholdUtils.get_active_household()
+            if active_household:
+                amount = context.get('diamondCount', 10) * 10  # 10 simoleons per diamond
+                active_household.funds.try_add_funds(amount * count)
+                log.info(f"Added {amount * count} simoleons")
         
-        # Example implementations:
-        # if action == 'flirt':
-        #     # Apply flirty buff to all sims in household
-        #     for sim in CommonSimUtils.get_sim_instances_for_household():
-        #         CommonBuffUtils.add_buff(sim, CommonBuffId.FLIRTY)
-        #         log.info(f"Applied flirty buff to {sim.first_name}")
-        #
-        # elif action == 'give_money':
-        #     # Add money to household funds
-        #     active_household = CommonHouseholdUtils.get_active_household()
-        #     if active_household:
-        #         amount = context.get('diamondCount', 10) * 10  # 10 simoleons per diamond
-        #         active_household.funds.try_add_funds(amount * count)
-        #         log.info(f"Added {amount * count} simoleons")
-        #
-        # elif action == 'break_object':
-        #     # Find and break a random object
-        #     # Implementation would go here
-        #     pass
-        pass
+        elif action == 'break_object':
+            # Find and break a random object
+            # Implementation would go here
+            pass
+        else:
+            log.info(f"TODO: Apply effect for action '{action}' x{count}")

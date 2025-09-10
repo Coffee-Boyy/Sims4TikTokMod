@@ -18,7 +18,7 @@ from sims4communitylib.utils.common_log_registry import CommonLogRegistry
 from sims_tik_tok_mod.modinfo import ModInfo
 
 # Create a logger for this module
-log = CommonLogRegistry.get().register_log(ModInfo.get_identity(), 'TikTokBridge')
+log = CommonLogRegistry.get().register_log(ModInfo.get_identity(), 'TikTokBridge')  # type: ignore[attr-defined]
 log.enable()
 
 class TikTokBridgeClient:
@@ -38,6 +38,9 @@ class TikTokBridgeClient:
         
         # Callback for when like events are received
         self.on_like_callback: Optional[Callable[[Dict[str, Any]], None]] = None
+        
+        # Callback for connection status changes
+        self.on_connection_callback: Optional[Callable[[bool, str], None]] = None
         
         # Connection retry settings
         self.max_retries = 5
@@ -60,10 +63,20 @@ class TikTokBridgeClient:
         """Set the callback function to be called when like events are received"""
         self.on_like_callback = callback
         
+    def set_connection_callback(self, callback: Callable[[bool, str], None]) -> None:
+        """Set the callback function to be called when connection status changes"""
+        self.on_connection_callback = callback
+        
     def start(self) -> bool:
         """Start the WebSocket client connection"""
         if not WEBSOCKET_AVAILABLE:
             log.error("[TikTokBridge] WebSocket client not available. Please install websocket-client package.")
+            # Notify about websocket unavailability
+            if self.on_connection_callback:
+                try:
+                    self.on_connection_callback(False, "WebSocket client not available")
+                except Exception as e:
+                    log.error(f"Error in connection callback: {e}")
             return False
             
         if self.is_running:
@@ -145,15 +158,32 @@ class TikTokBridgeClient:
                         time.sleep(delay)
                     else:
                         log.info("[TikTokBridge] Max retries reached. Stopping TikTok bridge client.")
+                        # Notify about connection failure
+                        if self.on_connection_callback:
+                            try:
+                                self.on_connection_callback(False, "Failed to connect to TikTok bridge after maximum retry attempts")
+                            except Exception as e:
+                                log.error(f"Error in connection callback: {e}")
                         break
                         
             except Exception as e:
-                # Silent error handling - only log on first attempt or after significant delays
+                # Handle different types of connection errors
                 current_time = time.time()
                 time_since_last_retry = current_time - self.last_retry_time
                 
+                # Determine error type and create appropriate user message
+                error_message = self._get_user_friendly_error_message(e)
+                
+                # Only log and notify on first attempt or after significant delays
                 if self.current_retries == 0 or time_since_last_retry >= self.max_retry_delay:
                     log.error(f"[TikTokBridge] Connection error: {e}")
+                    
+                    # Notify user about the connection error (only on first attempt to avoid spam)
+                    if self.current_retries == 0 and self.on_connection_callback:
+                        try:
+                            self.on_connection_callback(False, error_message)
+                        except Exception as callback_error:
+                            log.error(f"Error in connection callback: {callback_error}")
                 
                 self.current_retries += 1
                 if self.is_running and self.current_retries < self.max_retries:
@@ -163,6 +193,27 @@ class TikTokBridgeClient:
                     
         self.is_running = False
         self.is_connected = False
+    
+    def _get_user_friendly_error_message(self, error: Exception) -> str:
+        """Convert technical errors into user-friendly messages"""
+        error_name = type(error).__name__
+        error_str = str(error).lower()
+        
+        if error_name == 'ConnectionRefusedError' or 'connection refused' in error_str:
+            return "Cannot connect to TikTok bridge service. Make sure the bridge application is running."
+        elif error_name == 'ConnectionResetError' or 'connection reset' in error_str:
+            return "Connection to TikTok bridge was lost. The bridge service may have stopped."
+        elif error_name == 'TimeoutError' or 'timeout' in error_str:
+            return "Connection to TikTok bridge timed out. Check your network connection."
+        elif 'name resolution' in error_str or 'nodename nor servname provided' in error_str:
+            return "Cannot find TikTok bridge service. Check the bridge service address."
+        elif 'permission denied' in error_str:
+            return "Permission denied connecting to TikTok bridge. Check firewall settings."
+        elif 'network is unreachable' in error_str:
+            return "Network unreachable. Check your internet connection."
+        else:
+            # Generic fallback message for unknown errors
+            return f"Failed to connect to TikTok bridge service. Error: {error_name}"
         
     def _on_open(self, ws) -> None:
         """Called when WebSocket connection is opened"""
@@ -170,6 +221,13 @@ class TikTokBridgeClient:
         self.is_connected = True
         self.current_retries = 0  # Reset retry counter on successful connection
         self.last_successful_connection = time.time()  # Track successful connection time
+        
+        # Notify about successful connection
+        if self.on_connection_callback:
+            try:
+                self.on_connection_callback(True, "Connected to TikTok bridge")
+            except Exception as e:
+                log.error(f"Error in connection callback: {e}")
         
     def _on_message(self, ws, message: str) -> None:
         """Called when a message is received from the bridge"""
@@ -198,14 +256,22 @@ class TikTokBridgeClient:
     def _on_error(self, ws, error) -> None:
         """Called when a WebSocket error occurs"""
         try:
-            # Silent error handling - only log errors that are significant
-            # Avoid logging common connection errors that happen during reconnection
+            # Handle errors gracefully and provide user feedback when appropriate
             current_time = time.time()
             time_since_last_retry = current_time - self.last_retry_time
             
             # Only log errors on first attempt or after significant delays to avoid spam
             if self.current_retries == 0 or time_since_last_retry >= self.max_retry_delay:
                 log.error(f"[TikTokBridge] WebSocket error: {error}")
+                
+                # For websocket-specific errors that occur after connection, provide user feedback
+                # But only on first occurrence to avoid spam
+                if self.current_retries == 0 and self.on_connection_callback:
+                    error_message = self._get_user_friendly_error_message(error)
+                    try:
+                        self.on_connection_callback(False, error_message)
+                    except Exception as callback_error:
+                        log.error(f"Error in connection callback: {callback_error}")
         except:
             # If even logging fails, just pass to avoid crashes
             pass

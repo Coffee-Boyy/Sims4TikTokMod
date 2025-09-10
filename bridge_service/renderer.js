@@ -49,6 +49,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize gift configuration
     initializeGiftConfiguration();
+    
+    // Load saved username
+    loadSavedUsername();
 });
 
 function setupEventListeners() {
@@ -68,6 +71,27 @@ function setupEventListeners() {
     window.electronAPI.onLogMessage((logMessage) => {
         addLogEntry(logMessage);
     });
+}
+
+async function loadSavedUsername() {
+    try {
+        const result = await window.electronAPI.getLastTikTokUsername();
+        if (result.success && result.username) {
+            elements.username.value = result.username;
+            addLogEntry({
+                type: 'info',
+                message: `Loaded saved username: ${result.username}`,
+                timestamp: new Date().toISOString()
+            });
+        }
+    } catch (error) {
+        console.error('Failed to load saved username:', error);
+        addLogEntry({
+            type: 'warning',
+            message: 'Could not load saved username from previous session',
+            timestamp: new Date().toISOString()
+        });
+    }
 }
 
 async function startBridge() {
@@ -92,7 +116,7 @@ async function startBridge() {
             isConnected = true;
             currentConfig = config;
             elements.startBtn.style.display = 'none';
-            elements.stopBtn.style.display = 'inline-block';
+            elements.stopBtn.style.display = 'inline-flex'; // Use inline-flex to match button styling
             elements.stopBtn.disabled = false;
             
             // Update status display
@@ -137,7 +161,7 @@ async function stopBridge() {
         if (result.success) {
             isConnected = false;
             currentConfig = null;
-            elements.startBtn.style.display = 'inline-block';
+            elements.startBtn.style.display = 'inline-flex'; // Use inline-flex to match button styling
             elements.stopBtn.style.display = 'none';
             
             // Reset status display
@@ -299,9 +323,22 @@ async function updateStatus() {
         if (status.connected) {
             elements.connectionStatus.textContent = 'Running';
             elements.connectionStatus.className = 'status-value status-running';
+            
+            // Show stop button, hide start button if bridge is running
+            if (!isConnected) {
+                elements.startBtn.style.display = 'none';
+                elements.stopBtn.style.display = 'inline-flex';
+                elements.stopBtn.disabled = false;
+            }
         } else {
             elements.connectionStatus.textContent = 'Stopped';
             elements.connectionStatus.className = 'status-value status-stopped';
+            
+            // Show start button, hide stop button if bridge is stopped
+            if (isConnected) {
+                elements.startBtn.style.display = 'inline-flex';
+                elements.stopBtn.style.display = 'none';
+            }
         }
         
         // Update client count
@@ -313,6 +350,11 @@ async function updateStatus() {
         // Show error status if we can't get status
         elements.connectionStatus.textContent = 'Error';
         elements.connectionStatus.className = 'status-value status-error';
+        
+        // On error, ensure we show start button and hide stop button
+        elements.startBtn.style.display = 'inline-flex';
+        elements.stopBtn.style.display = 'none';
+        isConnected = false;
     }
 }
 

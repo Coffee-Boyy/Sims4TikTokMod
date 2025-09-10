@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import TikTokBridgeService from './bridge-service.js';
+import UserSettings from './user-settings.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -9,6 +10,7 @@ const __dirname = dirname(__filename);
 let mainWindow;
 let bridgeService;
 let isConnected = false;
+let userSettings;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -72,7 +74,11 @@ function createWindow() {
     });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+    // Initialize user settings
+    userSettings = new UserSettings();
+    await userSettings.loadSettings();
+    
     createWindow();
 
     app.on('activate', () => {
@@ -140,11 +146,23 @@ ipcMain.handle('start-bridge', async (event, config) => {
         if (config.manualMode) {
             bridgeService.startWebSocketServer();
             isConnected = true;
+            
+            // Save username when bridge starts successfully
+            if (config.username && userSettings) {
+                await userSettings.saveLastTikTokUsername(config.username);
+            }
+            
             return { success: true, message: 'Manual mode started successfully' };
         } else {
             bridgeService.setupWebSocketServer();
             await bridgeService.start();
             isConnected = true;
+            
+            // Save username when bridge starts successfully
+            if (config.username && userSettings) {
+                await userSettings.saveLastTikTokUsername(config.username);
+            }
+            
             return { success: true, message: 'Bridge connected successfully' };
         }
     } catch (error) {
@@ -253,5 +271,61 @@ ipcMain.handle('send-manual-gift', async (event, giftData) => {
     } catch (error) {
         console.error('Failed to send manual gift:', error);
         return { success: false, message: error.message };
+    }
+});
+
+// User Settings IPC Handlers
+ipcMain.handle('get-user-settings', async () => {
+    try {
+        if (userSettings) {
+            return { success: true, settings: userSettings.getAllSettings() };
+        } else {
+            return { success: false, error: 'User settings not initialized' };
+        }
+    } catch (error) {
+        console.error('Failed to get user settings:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('get-last-tiktok-username', async () => {
+    try {
+        if (userSettings) {
+            const username = userSettings.getLastTikTokUsername();
+            return { success: true, username: username };
+        } else {
+            return { success: false, error: 'User settings not initialized' };
+        }
+    } catch (error) {
+        console.error('Failed to get last TikTok username:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('save-user-setting', async (event, key, value) => {
+    try {
+        if (userSettings) {
+            await userSettings.set(key, value);
+            return { success: true };
+        } else {
+            return { success: false, error: 'User settings not initialized' };
+        }
+    } catch (error) {
+        console.error('Failed to save user setting:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('reset-user-settings', async () => {
+    try {
+        if (userSettings) {
+            await userSettings.resetToDefaults();
+            return { success: true };
+        } else {
+            return { success: false, error: 'User settings not initialized' };
+        }
+    } catch (error) {
+        console.error('Failed to reset user settings:', error);
+        return { success: false, error: error.message };
     }
 });

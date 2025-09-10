@@ -24,6 +24,12 @@ try {
         showInfoDialog: (options) => ipcRenderer.invoke('show-info-dialog', options),
         showErrorDialog: (options) => ipcRenderer.invoke('show-error-dialog', options),
         
+        // User Settings
+        getUserSettings: () => ipcRenderer.invoke('get-user-settings'),
+        getLastTikTokUsername: () => ipcRenderer.invoke('get-last-tiktok-username'),
+        saveUserSetting: (key, value) => ipcRenderer.invoke('save-user-setting', key, value),
+        resetUserSettings: () => ipcRenderer.invoke('reset-user-settings'),
+        
         // Event listeners
         onLogMessage: (callback) => {
             ipcRenderer.on('log-message', (event, message) => callback(message));

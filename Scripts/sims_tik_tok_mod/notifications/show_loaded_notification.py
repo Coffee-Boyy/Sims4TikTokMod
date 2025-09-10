@@ -15,7 +15,7 @@ class S4CLSampleModShowLoadedMessage:
     def show_loaded_notification() -> None:
         """ Show that the sample mod has loaded. """
         notification = CommonBasicNotification(
-            "🎮 Sims 4 TikTok Mod",
+            "Sims 4 - TikTok Mod",
             "Mod loaded! Connecting to TikTok bridge..."
         )
         notification.show()

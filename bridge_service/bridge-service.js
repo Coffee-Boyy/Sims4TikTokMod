@@ -529,7 +529,7 @@ If you cannot determine an attribute, use reasonable defaults.`;
         this.log('🔍 DEBUGGING TIPS:', 'error');
         
         // Safely get error message
-        const errorMessage = error?.message || error?.toString() || 'Unknown error';
+        const errorMessage = error?.message || error?.toString?.() || JSON.stringify(error) || 'Unknown error';
         const errorMessageLower = errorMessage.toLowerCase();
         
         if (errorMessageLower.includes('live has ended') || errorMessageLower.includes('not found') || errorMessageLower.includes('room not exist')) {
