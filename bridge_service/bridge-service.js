@@ -54,6 +54,11 @@ class TikTokBridgeService {
         this.diamondTimeout = config.diamondTracking?.timeout || 3600; // 1 hour
         this.diamondTrackers = new Map(); // Track diamond accumulation per user
         
+        // Like tracking configuration
+        this.likesThreshold = config.likeTracking?.threshold || 100; // Number of likes needed to trigger simoleon reward
+        this.likesTimeout = config.likeTracking?.timeout || 60; // Time in seconds before accumulated likes expire
+        this.likeTrackers = new Map(); // Track like accumulation per user
+        
         // Profile picture configuration
         this.profilePicturesEnabled = config.profilePictures?.enabled !== false;
         this.useWebScraping = config.profilePictures?.useWebScraping !== false;
@@ -79,8 +84,9 @@ class TikTokBridgeService {
             this.setupTikTokEvents();
         }
         
-        // Start cleanup interval for expired diamond trackers
+        // Start cleanup interval for expired diamond trackers and like trackers
         this.startDiamondTrackerCleanup();
+        this.startLikeTrackerCleanup();
     }
     
     log(message, type = 'info') {
@@ -489,33 +495,106 @@ If you cannot determine an attribute, use reasonable defaults.`;
     }
     
     processLikeEvent(data) {
-        const currentTime = Date.now();
-        
-        // Reset minute counter if needed
-        if (currentTime - this.minuteStartTime >= 60000) {
-            this.eventsThisMinute = 0;
-            this.minuteStartTime = currentTime;
+        try {
+            const currentTime = Date.now();
+            
+            // Reset minute counter if needed
+            if (currentTime - this.minuteStartTime >= 60000) {
+                this.eventsThisMinute = 0;
+                this.minuteStartTime = currentTime;
+            }
+            
+            // Extract username from data
+            const username = data.user?.uniqueId || data.uniqueId || 'unknown';
+            const likeCount = data.likeCount || data.count || data.totalLikeCount || 1;
+            
+            this.log(`❤️  Processing like: ${username} liked (${likeCount} total)`, 'like');
+            
+            // Clean up expired likes first
+            this.cleanupExpiredLikeTrackers();
+            
+            // Accumulate likes for this user
+            this.accumulateLikes(username, likeCount);
+            
+        } catch (error) {
+            this.log(`❌ Error processing like event: ${this.formatError(error)}`, 'error');
         }
-        
-        // Extract username from data
-        const username = data.user?.uniqueId || data.uniqueId || 'unknown';
-        
-        // No rate limiting for likes - let Sims 4 mod handle accumulation
-        
-        // Create event payload for Sims 4 mod
-        const likeCount = data.likeCount || data.count || data.totalLikeCount || 1;
-        
-        const payload = {
-            type: 'like',
-            user: username,
-            likeCount: likeCount,
-            timestamp: new Date().toISOString()
-        };
-        
-        this.log(`❤️  Processing like: ${payload.user} liked (${payload.likeCount} total)`, 'like');
-        
-        // Send to all connected Sims 4 mod clients
-        this.broadcastToClients(payload);
+    }
+    
+    accumulateLikes(username, likeCount) {
+        try {
+            const currentTime = Date.now() / 1000; // Convert to seconds
+            
+            // Initialize or update tracker for this user
+            if (!this.likeTrackers.has(username)) {
+                this.likeTrackers.set(username, {
+                    totalLikes: 0,
+                    firstLikeTime: currentTime,
+                    lastLikeTime: currentTime
+                });
+            }
+            
+            const tracker = this.likeTrackers.get(username);
+            tracker.totalLikes += likeCount;
+            tracker.lastLikeTime = currentTime;
+            
+            this.log(`💖 User ${username} now has ${tracker.totalLikes} accumulated likes`, 'like');
+            
+            // Check if we should trigger a reward
+            this.checkAndTriggerLikeReward(username, tracker);
+            
+        } catch (error) {
+            this.log(`❌ Error accumulating likes for ${username}: ${this.formatError(error)}`, 'error');
+        }
+    }
+    
+    checkAndTriggerLikeReward(username, tracker) {
+        try {
+            const currentTime = Date.now() / 1000;
+            const timeSinceFirst = currentTime - tracker.firstLikeTime;
+            
+            // Check if threshold reached or timeout elapsed
+            const shouldTrigger = (tracker.totalLikes >= this.likesThreshold || 
+                                 timeSinceFirst >= this.likesTimeout);
+            
+            if (shouldTrigger) {
+                // Trigger reward
+                this.triggerLikeReward(username, tracker.totalLikes);
+                
+                // Remove tracker since reward was triggered
+                this.likeTrackers.delete(username);
+            }
+            
+        } catch (error) {
+            this.log(`❌ Error checking like reward trigger for ${username}: ${this.formatError(error)}`, 'error');
+        }
+    }
+    
+    triggerLikeReward(username, totalLikes) {
+        try {
+            this.log(`🎉 Like threshold reached for ${username}! Triggering simoleon reward for ${totalLikes} likes...`, 'success');
+            
+            // Create a simoleon reward action for the Sims 4 mod
+            const rewardPayload = {
+                type: 'sims_action',
+                user: username,
+                action: 'like_reward',
+                count: totalLikes, // Amount of simoleons to add
+                context: {
+                    totalLikes: totalLikes,
+                    rewardType: 'like_milestone',
+                    description: `${username} reached ${totalLikes} likes!`
+                },
+                timestamp: new Date().toISOString()
+            };
+            
+            // Send the reward action to connected clients
+            this.broadcastToClients(rewardPayload);
+            this.log(`📤 Like reward sent: ${username} -> ${totalLikes} simoleons for ${totalLikes} likes`, 'like');
+            
+        } catch (error) {
+            this.log(`❌ Error triggering like reward for ${username}: ${this.formatError(error)}`, 'error');
+        }
     }
     
     broadcastToClients(payload) {
@@ -578,6 +657,7 @@ If you cannot determine an attribute, use reasonable defaults.`;
             this.log(`   AI Model: ${this.aiModel}`, 'info');
         }
         this.log(`   Diamond Tracking: ✅ Enabled (threshold: ${this.diamondThreshold}, timeout: ${this.diamondTimeout}s)`, 'info');
+        this.log(`   Like Tracking: ✅ Enabled (threshold: ${this.likesThreshold}, timeout: ${this.likesTimeout}s)`, 'info');
         
         try {
             this.log('🔗 Attempting to connect to TikTok Live...', 'info');
@@ -753,6 +833,13 @@ If you cannot determine an attribute, use reasonable defaults.`;
         }, 5 * 60 * 1000); // 5 minutes
     }
     
+    startLikeTrackerCleanup() {
+        // Clean up expired like trackers every minute
+        setInterval(() => {
+            this.cleanupExpiredLikeTrackers();
+        }, 60 * 1000); // 1 minute
+    }
+    
     cleanupExpiredDiamondTrackers() {
         try {
             const currentTime = Date.now() / 1000;
@@ -776,6 +863,36 @@ If you cannot determine an attribute, use reasonable defaults.`;
             
         } catch (error) {
             this.log(`❌ Error cleaning up expired diamond trackers: ${this.formatError(error)}`, 'error');
+        }
+    }
+    
+    cleanupExpiredLikeTrackers() {
+        try {
+            const currentTime = Date.now() / 1000;
+            const expiredUsers = [];
+            
+            for (const [username, tracker] of this.likeTrackers.entries()) {
+                const timeSinceFirst = currentTime - tracker.firstLikeTime;
+                if (timeSinceFirst >= this.likesTimeout) {
+                    expiredUsers.push(username);
+                }
+            }
+            
+            // Trigger rewards for expired users and remove trackers
+            for (const username of expiredUsers) {
+                const tracker = this.likeTrackers.get(username);
+                if (tracker && tracker.totalLikes > 0) {
+                    this.triggerLikeReward(username, tracker.totalLikes);
+                }
+                this.likeTrackers.delete(username);
+            }
+            
+            if (expiredUsers.length > 0) {
+                this.log(`🧹 Cleaned up ${expiredUsers.length} expired like trackers`, 'info');
+            }
+            
+        } catch (error) {
+            this.log(`❌ Error cleaning up expired like trackers: ${this.formatError(error)}`, 'error');
         }
     }
     

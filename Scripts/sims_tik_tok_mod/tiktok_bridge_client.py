@@ -36,8 +36,6 @@ class TikTokBridgeClient:
         # Callback for when action events are received
         self.on_action_callback: Optional[Callable[[Dict[str, Any]], None]] = None
         
-        # Callback for when like events are received
-        self.on_like_callback: Optional[Callable[[Dict[str, Any]], None]] = None
         
         # Callback for connection status changes
         self.on_connection_callback: Optional[Callable[[bool, str], None]] = None
@@ -59,9 +57,6 @@ class TikTokBridgeClient:
         """Set the callback function to be called when action events are received"""
         self.on_action_callback = callback
         
-    def set_like_callback(self, callback: Callable[[Dict[str, Any]], None]) -> None:
-        """Set the callback function to be called when like events are received"""
-        self.on_like_callback = callback
         
     def set_connection_callback(self, callback: Callable[[bool, str], None]) -> None:
         """Set the callback function to be called when connection status changes"""
@@ -240,9 +235,9 @@ class TikTokBridgeClient:
             if event_type == 'sims_action' and self.on_action_callback:
                 # Call the action callback
                 self.on_action_callback(data)
-            elif event_type == 'like' and self.on_like_callback:
-                # Call the like callback
-                self.on_like_callback(data)
+            elif event_type == 'like':
+                # Like events are now handled by the bridge service
+                log.debug(f"Like event received but not processed (handled by bridge): {data.get('user', 'unknown')}")
             elif event_type == 'connection':
                 log.info(f"Bridge connection message: {data.get('message', '')}")
             else:

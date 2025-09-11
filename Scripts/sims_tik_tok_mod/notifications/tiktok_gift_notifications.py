@@ -13,6 +13,7 @@ from sims4communitylib.utils.sims.common_buff_utils import CommonBuffUtils
 from sims4communitylib.utils.sims.common_household_utils import CommonHouseholdUtils
 from sims4communitylib.utils.sims.common_sim_currency_utils import CommonSimCurrencyUtils
 from sims4communitylib.utils.sims.common_sim_utils import CommonSimUtils
+from sims4communitylib.utils.sims.common_sim_interaction_utils import CommonSimInteractionUtils
 from sims_tik_tok_mod.modinfo import ModInfo
 from sims_tik_tok_mod.tiktok_bridge_client import get_bridge_client
 from sims_tik_tok_mod.sim_character_creator import SimCharacterCreator
@@ -40,12 +41,6 @@ class TikTokActionNotifications:
         'default': 'Thank you for the gift!'
     }
     
-    # Like accumulation settings
-    LIKES_THRESHOLD = 100  # Number of likes needed to trigger simoleon reward
-    LIKES_TIMEOUT = 60     # Time in seconds before accumulated likes expire
-    
-    # Track accumulated likes per user
-    _like_accumulator: Dict[str, Dict[str, Any]] = {}
     
     @staticmethod
     def initialize() -> None:
@@ -58,7 +53,6 @@ class TikTokActionNotifications:
         # Get the bridge client and set up the callbacks
         bridge_client = get_bridge_client()
         bridge_client.set_action_callback(TikTokActionNotifications._handle_action_event)
-        bridge_client.set_like_callback(TikTokActionNotifications._handle_like_event)
         bridge_client.set_connection_callback(TikTokActionNotifications._handle_connection_event)
 
         # Start the bridge client
@@ -118,23 +112,6 @@ class TikTokActionNotifications:
         except Exception as e:
             log.error(f"Error handling Sims action event: {e}")
             
-    @staticmethod
-    def _handle_like_event(like_data: Dict[str, Any]) -> None:
-        """Handle a like event from the TikTok bridge"""
-        try:
-            user = like_data.get('user', 'Unknown')
-            like_count = like_data.get('likeCount', 1)
-            
-            log.info(f"Like received: {user} liked (total: {like_count})")
-            
-            # Clean up expired likes first
-            TikTokActionNotifications._cleanup_expired_likes()
-            
-            # Accumulate likes for this user
-            TikTokActionNotifications._accumulate_likes(user, like_count)
-            
-        except Exception as e:
-            log.error(f"Error handling like event: {e}")
             
     @staticmethod
     def _handle_connection_event(is_connected: bool, message: str) -> None:
@@ -188,126 +165,6 @@ class TikTokActionNotifications:
             
         except Exception as e:
             log.error(f"Error showing connection notification: {e}")
-            
-    @staticmethod
-    def _accumulate_likes(user: str, like_count: int) -> None:
-        """Accumulate likes for a user and trigger reward when threshold is reached"""
-        try:
-            current_time = time.time()
-            
-            # Initialize user data if not exists
-            if user not in TikTokActionNotifications._like_accumulator:
-                TikTokActionNotifications._like_accumulator[user] = {
-                    'total_likes': 0,
-                    'first_like_time': current_time,
-                    'last_like_time': current_time
-                }
-            
-            user_data = TikTokActionNotifications._like_accumulator[user]
-            
-            # Add likes to accumulator
-            user_data['total_likes'] += like_count
-            user_data['last_like_time'] = current_time
-            
-            log.info(f"[TikTokActionNotifications] User {user} now has {user_data['total_likes']} accumulated likes")
-            
-            # Check if we should trigger a reward
-            TikTokActionNotifications._check_and_trigger_like_reward(user, user_data)
-            
-        except Exception as e:
-            log.error(f"Error accumulating likes: {e}")
-            
-    @staticmethod
-    def _check_and_trigger_like_reward(user: str, user_data: Dict[str, Any]) -> None:
-        """Check if user has reached threshold or timeout and trigger reward"""
-        try:
-            current_time = time.time()
-            total_likes = user_data['total_likes']
-            time_since_first = current_time - user_data['first_like_time']
-            
-            # Check if threshold reached or timeout elapsed
-            should_trigger = (total_likes >= TikTokActionNotifications.LIKES_THRESHOLD or 
-                            time_since_first >= TikTokActionNotifications.LIKES_TIMEOUT)
-            
-            if should_trigger:
-                # Trigger reward
-                TikTokActionNotifications._trigger_like_reward(user, total_likes)
-                
-                # Reset accumulator for this user
-                del TikTokActionNotifications._like_accumulator[user]
-                
-        except Exception as e:
-            log.error(f"Error checking like reward trigger: {e}")
-            
-    @staticmethod
-    def _trigger_like_reward(user: str, total_likes: int) -> None:
-        """Trigger the simoleon reward for accumulated likes"""
-        try:
-            # Add simoleons (1 per like)
-            TikTokActionNotifications._add_simoleons_for_like(total_likes)
-            
-            # Create and show notification
-            title = "TikTok Like Milestone!"
-            description = f"{user} reached {total_likes} likes!\nAdded §{total_likes} to household funds!"
-            
-            # TikTokActionNotifications._show_gift_notification(title, description)  # Disabled - only showing sim spawned notifications
-            
-            log.info(f"[TikTokActionNotifications] Triggered reward for {user}: {total_likes} likes = §{total_likes}")
-            
-        except Exception as e:
-            log.error(f"Error triggering like reward: {e}")
-            
-    @staticmethod
-    def _add_simoleons_for_like(like_count: int) -> None:
-        """Add simoleons to the active household for TikTok likes"""
-        try:
-            # Get the active sim
-            active_sim_info = CommonSimUtils.get_active_sim_info()
-            if active_sim_info is None:
-                log.error("No active sim found, cannot add simoleons for like")
-                return
-                
-            # Add 1 simoleon per like
-            amount_to_add = like_count
-            result = CommonSimCurrencyUtils.add_simoleons_to_household(
-                active_sim_info, 
-                amount_to_add, 
-                CommonCurrencyModifyReason.EVENT_REWARD
-            )
-            
-            if result:
-                log.info(f"[TikTokActionNotifications] Added §{amount_to_add} to household funds for {like_count} like(s)")
-            else:
-                log.error(f"[TikTokActionNotifications] Failed to add simoleons: {result.reason}")
-                
-        except Exception as e:
-            log.error(f"Error adding simoleons for like: {e}")
-            
-    @staticmethod
-    def _cleanup_expired_likes() -> None:
-        """Clean up expired like accumulations"""
-        try:
-            current_time = time.time()
-            expired_users = []
-            
-            for user, user_data in TikTokActionNotifications._like_accumulator.items():
-                time_since_first = current_time - user_data['first_like_time']
-                if time_since_first >= TikTokActionNotifications.LIKES_TIMEOUT:
-                    expired_users.append(user)
-            
-            # Trigger rewards for expired users
-            for user in expired_users:
-                user_data = TikTokActionNotifications._like_accumulator[user]
-                total_likes = user_data['total_likes']
-                if total_likes > 0:
-                    TikTokActionNotifications._trigger_like_reward(user, total_likes)
-                del TikTokActionNotifications._like_accumulator[user]
-                
-            if expired_users:
-                log.info(f"[TikTokActionNotifications] Cleaned up {len(expired_users)} expired like accumulations")
-                
-        except Exception as e:
-            log.error(f"Error cleaning up expired likes: {e}")
 
     @staticmethod
     def _apply_action_effect(action: str, count: int, context: Dict[str, Any]) -> None:
@@ -345,6 +202,10 @@ class TikTokActionNotifications:
             # Make the active Sim give romantic hugs to nearby Sims
             TikTokActionNotifications._apply_romantic_hug_action(count)
         
+        elif action == 'like_reward':
+            # Add simoleons to household for like milestone reward
+            TikTokActionNotifications._add_simoleons_for_like_reward(count, context)
+        
         else:
             log.info(f"TODO: Apply effect for action '{action}' x{count}")
     
@@ -380,6 +241,17 @@ class TikTokActionNotifications:
             log.error(f"Error applying show off action: {e}")
     
     @staticmethod
+    def get_all_running_interaction_targets(sim_info):
+        """Get all targets from the sim's currently running interactions"""
+        sim = CommonSimUtils.get_sim_instance(sim_info)
+        if sim is None or sim.si_state is None:
+            return []
+        targets = []
+        for interaction in CommonSimInteractionUtils.get_running_interactions_gen(sim_info):
+            targets.append(getattr(interaction, 'target', None))
+        return targets
+
+    @staticmethod
     def _apply_romantic_hug_action(count: int) -> None:
         """Apply romantic hug action - makes the active Sim give romantic hugs to nearby Sims"""
         try:
@@ -404,34 +276,35 @@ class TikTokActionNotifications:
             else:
                 log.error(f"Failed to apply flirty buff: {result.reason}")
             
-            # Find nearby Sims to hug
-            active_sim = CommonSimUtils.get_sim_instance(active_sim_info)
-            if not active_sim:
-                log.error("Could not get active sim instance")
+            # Get targets from current interactions
+            interaction_targets = TikTokActionNotifications.get_all_running_interaction_targets(active_sim_info)
+            
+            # Filter out None targets and convert to sim_info objects
+            target_sims = []
+            for target in interaction_targets:
+                if target is not None:
+                    # Check if target is a Sim
+                    if hasattr(target, 'sim_info'):
+                        target_sims.append(target.sim_info)
+                    elif hasattr(target, 'id') and hasattr(target, 'first_name'):
+                        # Target is already a sim_info
+                        target_sims.append(target)
+            
+            # Remove duplicates and the active sim itself
+            unique_targets = []
+            for target_sim_info in target_sims:
+                if target_sim_info != active_sim_info and target_sim_info not in unique_targets:
+                    unique_targets.append(target_sim_info)
+            
+            if not unique_targets:
+                log.info("No interaction targets found for romantic hug - applying romantic mood to active Sim only")
                 return
             
-            # Get all sims in the same household or nearby
-            nearby_sims = []
-            
-            # First, try household members
-            for household_sim_info in CommonHouseholdUtils.get_sim_info_of_all_sims_in_active_household_generator():
-                if household_sim_info != active_sim_info:
-                    household_sim = CommonSimUtils.get_sim_instance(household_sim_info)
-                    if household_sim:
-                        # Check if they're on the same lot (simplified check)
-                        active_location = CommonSimUtils.get_sim_instance(active_sim_info)
-                        if active_location and household_sim:
-                            nearby_sims.append(household_sim_info)
-            
-            if not nearby_sims:
-                log.info("No nearby Sims found for romantic hug - applying romantic mood to active Sim only")
-                return
-            
-            # Apply romantic interactions/buffs to nearby sims
+            # Apply romantic interactions/buffs to interaction targets
             hugs_given = 0
-            max_hugs = min(count, len(nearby_sims), 3)  # Limit to prevent spam
+            max_hugs = min(count, len(unique_targets), 1)  # Limit to prevent spam
             
-            for target_sim_info in nearby_sims[:max_hugs]:
+            for target_sim_info in unique_targets[:max_hugs]:
                 try:
                     # Apply flirty buff to target as well
                     buff_result = CommonBuffUtils.add_buff(target_sim_info, CommonBuffId.FLIRTY_BY_POTION, buff_reason="Romantic hug from TikTok gift")
@@ -449,7 +322,7 @@ class TikTokActionNotifications:
                             active_sim_info, 
                             target_sim_info, 
                             CommonRelationshipTrackId.ROMANCE,  # Use the romance track
-                            10.0  # Add 10 romance relationship points
+                            100.0  # Add 10 romance relationship points
                         )
                         if relationship_change_result:
                             log.info(f"Improved romantic relationship between {active_sim_info.first_name} and {target_sim_info.first_name}")
@@ -459,7 +332,7 @@ class TikTokActionNotifications:
                             active_sim_info,
                             target_sim_info,
                             CommonRelationshipTrackId.FRIENDSHIP,  # Use the friendship track
-                            5.0  # Add 5 friendship points as well
+                            100.0  # Add 5 friendship points as well
                         )
                         if friendship_result:
                             log.info(f"Improved friendship between {active_sim_info.first_name} and {target_sim_info.first_name}")
@@ -474,3 +347,39 @@ class TikTokActionNotifications:
             
         except Exception as e:
             log.error(f"Error applying romantic hug action: {e}")
+    
+    @staticmethod
+    def _add_simoleons_for_like_reward(like_count: int, context: Dict[str, Any]) -> None:
+        """Add simoleons to the active household for TikTok like milestone reward"""
+        try:
+            from sims4communitylib.utils.sims.common_sim_utils import CommonSimUtils
+            from sims4communitylib.utils.sims.common_sim_currency_utils import CommonSimCurrencyUtils
+            from sims4communitylib.enums.common_currency_modify_reasons import CommonCurrencyModifyReason
+            
+            # Get the active sim
+            active_sim_info = CommonSimUtils.get_active_sim_info()
+            if active_sim_info is None:
+                log.error("No active sim found, cannot add simoleons for like reward")
+                return
+                
+            # Add 1 simoleon per like
+            amount_to_add = like_count
+            result = CommonSimCurrencyUtils.add_simoleons_to_household(
+                active_sim_info, 
+                amount_to_add, 
+                CommonCurrencyModifyReason.EVENT_REWARD
+            )
+            
+            if result:
+                user = context.get('description', 'TikTok likes')
+                log.info(f"[TikTokActionNotifications] Added §{amount_to_add} to household funds for {user}")
+                
+                # Show notification for like milestone
+                title = "TikTok Like Milestone!"
+                description = f"Added §{amount_to_add} to household funds!\n{user}"
+                TikTokActionNotifications._show_gift_notification(title, description)
+            else:
+                log.error(f"[TikTokActionNotifications] Failed to add simoleons: {result.reason}")
+                
+        except Exception as e:
+            log.error(f"Error adding simoleons for like reward: {e}")
