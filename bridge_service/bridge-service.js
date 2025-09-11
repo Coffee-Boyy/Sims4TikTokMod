@@ -5,6 +5,7 @@ import axios from 'axios';
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
+import GiftMappings from './gift-mappings.js';
 
 const Appearance = z.object({
     hair_color: z.enum(['blonde', 'brown', 'black', 'red', 'gray', 'white', 'dark_brown', 'light_brown', 'auburn', 'ginger', 'platinum']),
@@ -36,7 +37,8 @@ class TikTokBridgeService {
         this.aiModel = config.aiAnalysis?.model || 'gpt-5-mini';
         this.aiTimeout = config.aiAnalysis?.timeout || 30000;
         
-        // Gift mappings for interactions
+        // Gift mappings for interactions - will be loaded from file
+        this.giftMappingsManager = new GiftMappings();
         this.giftMappings = {};
         this.aiEnabled = config.aiAnalysis?.enabled !== false && !!this.aiApiKey;
         
@@ -96,8 +98,36 @@ class TikTokBridgeService {
         console.log(`[${type.toUpperCase()}] ${message}`);
     }
     
+    formatError(error) {
+        if (!error) return 'Unknown error';
+        
+        // Handle different types of errors
+        if (typeof error === 'string') {
+            return error;
+        }
+        
+        try {
+            const exc = error.exception?.stack;
+            return JSON.stringify(error) + '\n' + exc;
+        } catch (e) {
+            // Fallback if JSON.stringify fails
+            return error.toString();
+        }
+    }
+    
     setupTikTokEvents() {
         this.log(`🔗 Setting up TikTok Live connection for: @${this.tiktokUsername}`);
+        
+        // Remove any existing event listeners to prevent duplicates
+        if (this.tiktokConnection) {
+            this.tiktokConnection.removeAllListeners('connected');
+            this.tiktokConnection.removeAllListeners('disconnected');
+            this.tiktokConnection.removeAllListeners('error');
+            this.tiktokConnection.removeAllListeners('gift');
+            this.tiktokConnection.removeAllListeners('chat');
+            this.tiktokConnection.removeAllListeners('like');
+            this.tiktokConnection.removeAllListeners('follow');
+        }
         
         // Connection events
         this.tiktokConnection.on('connected', (state) => {
@@ -118,7 +148,7 @@ class TikTokBridgeService {
             if (isWarning) {
                 this.log(`⚠️  TikTok connection warning: ${err.info}`, 'warning');
             } else {
-                const errorMessage = err?.message || err?.toString?.() || JSON.stringify(err) || 'Unknown error';
+                const errorMessage = this.formatError(err);
                 this.log(`❌ TikTok connection error: ${errorMessage}`, 'error');
                 this.handleTikTokError(err);
             }
@@ -204,7 +234,7 @@ class TikTokBridgeService {
         }
         
         // Check rate limits
-        const username = data.user?.uniqueId || data.uniqueId || 'unknown';
+        const username = data.user?.uniqueId || 'unknown';
         if (currentTime - this.lastSentTime < this.minInterval || 
             this.eventsThisMinute >= this.maxEventsPerMinute) {
             this.log(`⏱️  Rate limited: Skipping gift from ${username}`, 'warning');
@@ -222,13 +252,10 @@ class TikTokBridgeService {
         const diamondCount = data.giftDetails?.diamondCount || data.extendedGiftInfo?.diamond_count || 0;
         
         // Extract profile picture URL from user data
-        const profilePictureUrl = data.user?.avatarThumb?.urlList?.[0] || 
-                                 data.user?.avatarMedium?.urlList?.[0] || 
-                                 data.user?.avatarLarger?.urlList?.[0] || 
-                                 null;
+        const profilePictureUrl = data.user?.profilePicture?.url?.[0];
 
         // Look up the mapped Sims interaction for this gift
-        const giftKey = giftName.toLowerCase();
+        const giftKey = giftName.toLowerCase().trim().replace(/ /g, '_');
         const simsInteraction = this.giftMappings[giftKey] || this.giftMappings[giftId] || 'none';
         
         // Only send to mod if there's a mapped interaction
@@ -264,8 +291,8 @@ class TikTokBridgeService {
                     }
                     
                     // If this gift has diamonds and a profile picture, analyze the appearance
-                    if (profilePictureUrl && this.aiEnabled) {
-                        return this.analyzeUserAppearance(username).then(appearanceData => {
+                    if (shouldCreateSim && profilePictureUrl && this.aiEnabled) {
+                        return this.analyzeUserAppearance(username, profilePictureUrl).then(appearanceData => {
                             return { shouldCreateSim, diamondTracking: result, appearanceAnalysis: appearanceData };
                         });
                     }
@@ -291,22 +318,18 @@ class TikTokBridgeService {
                         };
                         this.broadcastToClients(simCreationPayload);
                         this.log(`📤 Sim creation action sent: ${username} -> create_sim`, 'gift');
+                    } else {
+                        // Send the gift action
+                        this.broadcastToClients(payload);
+                        this.log(`📤 Sims action sent: ${username} -> ${simsInteraction} (from ${giftName}, ${diamondCount} 💎)`, 'gift');
                     }
-                    
-                    // Send the gift action
-                    this.broadcastToClients(payload);
-                    this.log(`📤 Sims action sent: ${username} -> ${simsInteraction} (from ${giftName}, ${diamondCount} 💎)`, 'gift');
                 })
                 .catch(error => {
-                    this.log(`❌ Error processing gift for ${username}: ${error.message}`, 'error');
+                    this.log(`❌ Error processing gift for ${username}: ${this.formatError(error)}`, 'error');
                     // Still send the gift action even if diamond tracking fails
                     this.broadcastToClients(payload);
                     this.log(`📤 Sims action sent: ${username} -> ${simsInteraction} (from ${giftName}, ${diamondCount} 💎)`, 'gift');
                 });
-        } else {
-            // No diamonds, send gift action immediately
-            this.broadcastToClients(payload);
-            this.log(`📤 Sims action sent: ${username} -> ${simsInteraction} (from ${giftName})`, 'gift');
         }
     }
     
@@ -358,7 +381,7 @@ class TikTokBridgeService {
             };
             
         } catch (error) {
-            this.log(`❌ Error processing diamond tracking for ${username}: ${error.message}`, 'error');
+            this.log(`❌ Error processing diamond tracking for ${username}: ${this.formatError(error)}`, 'error');
             return null;
         }
     }
@@ -367,12 +390,11 @@ class TikTokBridgeService {
         return "https://p19-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/96342a004e5b15067605aeb18c70faf1~tplv-tiktokx-cropcenter:1080:1080.jpeg?dr=9640&refresh_token=6f355dd4&x-expires=1757368800&x-signature=EdaetmYBWIdwSWQiZRx9SKYY43I%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5";
     }
     
-    async analyzeUserAppearance(username) {
+    async analyzeUserAppearance(username, profilePictureUrl) {
         try {
             this.log(`🎨 Starting appearance analysis for ${username}...`, 'ai');
             
             // Get profile picture URL
-            const profilePictureUrl = this.getProfilePictureUrl(username);
             if (!profilePictureUrl) {
                 this.log(`⚠️ No profile picture available for ${username}, using defaults`, 'warning');
                 return this.getDefaultAppearance();
@@ -388,7 +410,7 @@ class TikTokBridgeService {
             return appearanceData;
             
         } catch (error) {
-            this.log(`❌ Error in appearance analysis for ${username}: ${error.message}`, 'error');
+            this.log(`❌ Error in appearance analysis for ${username}: ${this.formatError(error)}`, 'error');
             return this.getDefaultAppearance();
         }
     }
@@ -461,7 +483,7 @@ If you cannot determine an attribute, use reasonable defaults.`;
             const content = response.output_parsed;
             return content;
         } catch (error) {
-            this.log(`❌ Error analyzing profile picture for ${username}: ${error.message}`, 'error');
+            this.log(`❌ Error analyzing profile picture for ${username}: ${this.formatError(error)}`, 'error');
             return null;
         }
     }
@@ -511,7 +533,7 @@ If you cannot determine an attribute, use reasonable defaults.`;
                     client.send(message);
                     this.log(`📤 Sent to client: ${payload.type} event for ${payload.user}`, 'websocket');
                 } catch (error) {
-                    this.log(`❌ Error sending to client: ${error.message}`, 'error');
+                    this.log(`❌ Error sending to client: ${this.formatError(error)}`, 'error');
                     disconnectedClients.add(client);
                 }
             } else {
@@ -526,10 +548,8 @@ If you cannot determine an attribute, use reasonable defaults.`;
     }
     
     handleTikTokError(error) {
-        this.log('🔍 DEBUGGING TIPS:', 'error');
-        
-        // Safely get error message
-        const errorMessage = error?.message || error?.toString?.() || JSON.stringify(error) || 'Unknown error';
+        // Use the improved error formatting
+        const errorMessage = this.formatError(error);
         const errorMessageLower = errorMessage.toLowerCase();
         
         if (errorMessageLower.includes('live has ended') || errorMessageLower.includes('not found') || errorMessageLower.includes('room not exist')) {
@@ -540,22 +560,13 @@ If you cannot determine an attribute, use reasonable defaults.`;
         } else if (errorMessageLower.includes('rate limit') || errorMessageLower.includes('429')) {
             this.log('   🔍 Rate limit detected - TikTok may be blocking requests', 'error');
             this.log('   Try again in a few minutes', 'error');
-        } else if (errorMessageLower.includes('network') || errorMessageLower.includes('enotfound') || errorMessageLower.includes('connection')) {
-            this.log('   🔍 Network connection issue detected', 'error');
-            this.log('   Check your internet connection and firewall settings', 'error');
         } else if (errorMessageLower.includes('undefined') || !errorMessage || errorMessage === 'Unknown error') {
             this.log('   🔍 Connection failed - likely causes:', 'error');
             this.log(`   1. @${this.tiktokUsername} is NOT currently live streaming`, 'error');
             this.log('   2. Username does not exist on TikTok', 'error');
             this.log('   3. TikTok may be blocking the connection', 'error');
             this.log('   4. Try a different username that you know is currently live', 'error');
-        } else {
-            this.log(`   🔍 Unexpected error: ${errorMessage}`, 'error');
-            this.log(`   1. @${this.tiktokUsername} may not be live streaming`, 'error');
-            this.log('   2. Try a different username', 'error');
         }
-        
-        this.log('⚠️  Note: This service only works when the TikTok user is actively live streaming!', 'warning');
     }
     
     async start() {
@@ -576,7 +587,8 @@ If you cannot determine an attribute, use reasonable defaults.`;
             // Connection success is already logged by the 'connected' event handler
             
         } catch (error) {
-            this.log(`❌ Failed to connect to TikTok Live: ${error}`, 'error');
+            const errorMessage = this.formatError(error);
+            this.log(`❌ Failed to connect to TikTok Live: ${errorMessage}`, 'error');
             this.handleTikTokError(error);
             throw error;
         }
@@ -607,12 +619,12 @@ If you cannot determine an attribute, use reasonable defaults.`;
             
             if (this.aiEnabled) {
                 this.log(`🤖 AI enabled - analyzing appearance for ${username}...`, 'ai');
-                appearanceAnalysis = await this.analyzeUserAppearance(username);
                 profilePictureUrl = this.getProfilePictureUrl(username);
+                appearanceAnalysis = await this.analyzeUserAppearance(username, profilePictureUrl);
             } else {
                 this.log(`⚠️ AI disabled - using default appearance for ${username}`, 'warning');
-                appearanceAnalysis = this.getDefaultAppearance();
                 profilePictureUrl = 'https://via.placeholder.com/150/4ECDC4/FFFFFF?text=Test';
+                appearanceAnalysis = this.getDefaultAppearance();
             }
             
             // Create the sim creation action data structure
@@ -640,7 +652,7 @@ If you cannot determine an attribute, use reasonable defaults.`;
             this.log(`✅ Sim creation event sent for ${username}`, 'success');
             
         } catch (error) {
-            this.log(`❌ Error in manual spawn command for ${username}: ${error.message}`, 'error');
+            this.log(`❌ Error in manual spawn command for ${username}: ${this.formatError(error)}`, 'error');
             
             // Fallback: send with default appearance
             const fallbackData = {
@@ -711,13 +723,27 @@ If you cannot determine an attribute, use reasonable defaults.`;
         this.log(`✅ Manual Sims action sent: ${username} -> ${mappedInteraction} (from ${giftName}, ${diamondCount} 💎)`, 'success');
     }
 
-    updateGiftMappings(mappings) {
+    async updateGiftMappings(mappings) {
         this.giftMappings = { ...mappings };
+        await this.giftMappingsManager.updateMappings(mappings);
         this.log(`🔧 Gift mappings updated: ${Object.keys(mappings).length} gifts configured`, 'info');
     }
 
     getGiftMappings() {
         return { ...this.giftMappings };
+    }
+
+    async loadGiftMappings() {
+        try {
+            this.giftMappings = await this.giftMappingsManager.loadMappings();
+            this.log(`📁 Gift mappings loaded: ${Object.keys(this.giftMappings).length} gifts configured`, 'info');
+            return this.giftMappings;
+        } catch (error) {
+            this.log(`❌ Failed to load gift mappings: ${this.formatError(error)}`, 'error');
+            // Use defaults if loading fails
+            this.giftMappings = this.giftMappingsManager.getAllMappings();
+            return this.giftMappings;
+        }
     }
 
     startDiamondTrackerCleanup() {
@@ -749,7 +775,7 @@ If you cannot determine an attribute, use reasonable defaults.`;
             }
             
         } catch (error) {
-            this.log(`❌ Error cleaning up expired diamond trackers: ${error.message}`, 'error');
+            this.log(`❌ Error cleaning up expired diamond trackers: ${this.formatError(error)}`, 'error');
         }
     }
     
@@ -767,10 +793,20 @@ If you cannot determine an attribute, use reasonable defaults.`;
                 this.connectedClients.clear();
             }
             
-            // Disconnect from TikTok
+            // Disconnect from TikTok and clean up event listeners
             if (this.tiktokConnection) {
+                // Remove all event listeners before disconnecting to prevent memory leaks
+                this.tiktokConnection.removeAllListeners('connected');
+                this.tiktokConnection.removeAllListeners('disconnected');
+                this.tiktokConnection.removeAllListeners('error');
+                this.tiktokConnection.removeAllListeners('gift');
+                this.tiktokConnection.removeAllListeners('chat');
+                this.tiktokConnection.removeAllListeners('like');
+                this.tiktokConnection.removeAllListeners('follow');
+                
                 this.tiktokConnection.disconnect();
                 this.tiktokConnection = null;
+                this.log('🔌 Disconnected from TikTok Live and cleaned up event listeners', 'info');
             }
             
             // Close WebSocket server
@@ -783,7 +819,7 @@ If you cannot determine an attribute, use reasonable defaults.`;
             
             this.log('👋 Bridge service stopped successfully', 'success');
         } catch (error) {
-            this.log(`❌ Error stopping bridge service: ${error.message}`, 'error');
+            this.log(`❌ Error stopping bridge service: ${this.formatError(error)}`, 'error');
         }
     }
 }

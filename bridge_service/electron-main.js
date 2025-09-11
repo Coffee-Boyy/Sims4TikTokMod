@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import TikTokBridgeService from './bridge-service.js';
 import UserSettings from './user-settings.js';
+import GiftMappings from './gift-mappings.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -11,6 +12,7 @@ let mainWindow;
 let bridgeService;
 let isConnected = false;
 let userSettings;
+let giftMappingsManager;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -79,6 +81,10 @@ app.whenReady().then(async () => {
     userSettings = new UserSettings();
     await userSettings.loadSettings();
     
+    // Initialize gift mappings manager
+    giftMappingsManager = new GiftMappings();
+    await giftMappingsManager.loadMappings();
+    
     createWindow();
 
     app.on('activate', () => {
@@ -142,6 +148,12 @@ ipcMain.handle('start-bridge', async (event, config) => {
                 mainWindow?.webContents.send('log-message', logMessage);
             }
         );
+
+        // Load gift mappings from standalone manager and sync to bridge service
+        if (giftMappingsManager) {
+            const mappings = giftMappingsManager.getAllMappings();
+            await bridgeService.updateGiftMappings(mappings);
+        }
 
         if (config.manualMode) {
             bridgeService.startWebSocketServer();
@@ -237,9 +249,16 @@ ipcMain.handle('open-external', async (event, url) => {
 
 ipcMain.handle('save-gift-mappings', async (event, mappings) => {
     try {
-        if (bridgeService) {
-            bridgeService.updateGiftMappings(mappings);
+        // Save to standalone gift mappings manager
+        if (giftMappingsManager) {
+            await giftMappingsManager.updateMappings(mappings);
         }
+        
+        // Also update bridge service if it's running
+        if (bridgeService) {
+            await bridgeService.updateGiftMappings(mappings);
+        }
+        
         return { success: true };
     } catch (error) {
         console.error('Failed to save gift mappings:', error);
@@ -249,8 +268,9 @@ ipcMain.handle('save-gift-mappings', async (event, mappings) => {
 
 ipcMain.handle('load-gift-mappings', async (event) => {
     try {
-        if (bridgeService) {
-            const mappings = bridgeService.getGiftMappings();
+        // Load from standalone gift mappings manager
+        if (giftMappingsManager) {
+            const mappings = giftMappingsManager.getAllMappings();
             return { success: true, mappings };
         }
         return { success: true, mappings: {} };

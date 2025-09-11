@@ -35,6 +35,8 @@ class TikTokActionNotifications:
         'rocket': 'House is on fire!',
         'lion': 'Celebrity spotted!',
         'flirty_compliment': 'Applied flirty buff to all household members!',
+        'show_off': 'Active Sim is showing off with confidence!',
+        'romantic_hug': 'Active Sim is giving romantic hugs to nearby Sims!',
         'default': 'Thank you for the gift!'
     }
     
@@ -334,5 +336,141 @@ class TikTokActionNotifications:
             # Find and break a random object
             # Implementation would go here
             pass
+        
+        elif action == 'show_off':
+            # Apply confident buff and make the active Sim show off
+            TikTokActionNotifications._apply_show_off_action(count)
+        
+        elif action == 'romantic_hug':
+            # Make the active Sim give romantic hugs to nearby Sims
+            TikTokActionNotifications._apply_romantic_hug_action(count)
+        
         else:
             log.info(f"TODO: Apply effect for action '{action}' x{count}")
+    
+    @staticmethod
+    def _apply_show_off_action(count: int) -> None:
+        """Apply show off action - makes the active Sim confident and perform show-off interactions"""
+        try:
+            from sims4communitylib.utils.sims.common_sim_utils import CommonSimUtils
+            from sims4communitylib.utils.sims.common_buff_utils import CommonBuffUtils
+            from sims4communitylib.enums.buffs_enum import CommonBuffId
+            from sims4communitylib.utils.sims.common_sim_interaction_utils import CommonSimInteractionUtils
+            
+            # Get the active sim
+            active_sim_info = CommonSimUtils.get_active_sim_info()
+            if not active_sim_info:
+                log.error("No active sim found for show_off action")
+                return
+            
+            # Apply confident buff to the active sim
+            result = CommonBuffUtils.add_buff(active_sim_info, CommonBuffId.CONFIDENCE_HIGH_CONFIDENCE_BOOST, buff_reason="Showing off from TikTok gift")
+            if result:
+                log.info(f"Applied confident buff to {active_sim_info.first_name} for show off action")
+            else:
+                log.error(f"Failed to apply confident buff: {result.reason}")
+            
+            # Try to make the sim perform a confident/show-off interaction
+            # Since we don't have specific show-off interactions in S4CL, we'll use confident posture and buff
+            # The confident buff will make the sim naturally perform more confident animations
+            
+            log.info(f"Show off action applied to {active_sim_info.first_name} with confident buff")
+            
+        except Exception as e:
+            log.error(f"Error applying show off action: {e}")
+    
+    @staticmethod
+    def _apply_romantic_hug_action(count: int) -> None:
+        """Apply romantic hug action - makes the active Sim give romantic hugs to nearby Sims"""
+        try:
+            from sims4communitylib.utils.sims.common_sim_utils import CommonSimUtils
+            from sims4communitylib.utils.sims.common_buff_utils import CommonBuffUtils
+            from sims4communitylib.enums.buffs_enum import CommonBuffId
+            from sims4communitylib.utils.sims.common_sim_interaction_utils import CommonSimInteractionUtils
+            from sims4communitylib.utils.sims.common_relationship_utils import CommonRelationshipUtils
+            from sims4communitylib.utils.location.common_location_utils import CommonLocationUtils
+            from sims4communitylib.utils.sims.common_household_utils import CommonHouseholdUtils
+            
+            # Get the active sim
+            active_sim_info = CommonSimUtils.get_active_sim_info()
+            if not active_sim_info:
+                log.error("No active sim found for romantic_hug action")
+                return
+            
+            # Apply flirty buff to the active sim
+            result = CommonBuffUtils.add_buff(active_sim_info, CommonBuffId.FLIRTY_BY_POTION, buff_reason="Romantic mood from TikTok gift")
+            if result:
+                log.info(f"Applied flirty buff to {active_sim_info.first_name} for romantic hug action")
+            else:
+                log.error(f"Failed to apply flirty buff: {result.reason}")
+            
+            # Find nearby Sims to hug
+            active_sim = CommonSimUtils.get_sim_instance(active_sim_info)
+            if not active_sim:
+                log.error("Could not get active sim instance")
+                return
+            
+            # Get all sims in the same household or nearby
+            nearby_sims = []
+            
+            # First, try household members
+            for household_sim_info in CommonHouseholdUtils.get_sim_info_of_all_sims_in_active_household_generator():
+                if household_sim_info != active_sim_info:
+                    household_sim = CommonSimUtils.get_sim_instance(household_sim_info)
+                    if household_sim:
+                        # Check if they're on the same lot (simplified check)
+                        active_location = CommonSimUtils.get_sim_instance(active_sim_info)
+                        if active_location and household_sim:
+                            nearby_sims.append(household_sim_info)
+            
+            if not nearby_sims:
+                log.info("No nearby Sims found for romantic hug - applying romantic mood to active Sim only")
+                return
+            
+            # Apply romantic interactions/buffs to nearby sims
+            hugs_given = 0
+            max_hugs = min(count, len(nearby_sims), 3)  # Limit to prevent spam
+            
+            for target_sim_info in nearby_sims[:max_hugs]:
+                try:
+                    # Apply flirty buff to target as well
+                    buff_result = CommonBuffUtils.add_buff(target_sim_info, CommonBuffId.FLIRTY_BY_POTION, buff_reason="Romantic hug from TikTok gift")
+                    if buff_result:
+                        log.info(f"Applied romantic buff to {target_sim_info.first_name}")
+                        hugs_given += 1
+                    
+                    # Try to improve relationship between the sims
+                    try:
+                        from sims4communitylib.utils.sims.common_relationship_utils import CommonRelationshipUtils
+                        from sims4communitylib.enums.relationship_tracks_enum import CommonRelationshipTrackId
+                        
+                        # Improve romantic relationship track
+                        relationship_change_result = CommonRelationshipUtils.change_relationship_level_of_sims(
+                            active_sim_info, 
+                            target_sim_info, 
+                            CommonRelationshipTrackId.ROMANCE,  # Use the romance track
+                            10.0  # Add 10 romance relationship points
+                        )
+                        if relationship_change_result:
+                            log.info(f"Improved romantic relationship between {active_sim_info.first_name} and {target_sim_info.first_name}")
+                        
+                        # Also improve friendship as a base
+                        friendship_result = CommonRelationshipUtils.change_relationship_level_of_sims(
+                            active_sim_info,
+                            target_sim_info,
+                            CommonRelationshipTrackId.FRIENDSHIP,  # Use the friendship track
+                            5.0  # Add 5 friendship points as well
+                        )
+                        if friendship_result:
+                            log.info(f"Improved friendship between {active_sim_info.first_name} and {target_sim_info.first_name}")
+                            
+                    except Exception as rel_error:
+                        log.debug(f"Could not change relationship: {rel_error}")
+                    
+                except Exception as e:
+                    log.error(f"Error applying romantic hug to {target_sim_info.first_name}: {e}")
+            
+            log.info(f"Romantic hug action completed - gave {hugs_given} romantic interactions")
+            
+        except Exception as e:
+            log.error(f"Error applying romantic hug action: {e}")

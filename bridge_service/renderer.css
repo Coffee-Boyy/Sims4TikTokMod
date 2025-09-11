@@ -334,7 +334,6 @@ select:focus {
     transition: all 0.2s ease;
     background: var(--input-bg);
     color: var(--text-primary);
-    min-height: 38px; /* Fixed height to prevent expansion with loading indicator */
     display: inline-flex;
     align-items: center;
     justify-content: center;

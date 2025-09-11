@@ -58,6 +58,8 @@
       "renderer.css",
       "preload.js",
       "bridge-service.js",
+      "gift-mappings.js",
+      "user-settings.js",
       "check-live.js",
       "config.json",
       "node_modules/**/*"

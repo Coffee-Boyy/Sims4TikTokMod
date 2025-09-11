@@ -48,7 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
     startStatusPolling();
     
     // Initialize gift configuration
-    initializeGiftConfiguration();
+    initializeGiftConfiguration().catch(error => {
+        console.error('Failed to initialize gift configuration:', error);
+    });
     
     // Load saved username
     loadSavedUsername();
@@ -541,8 +543,8 @@ const DEFAULT_GIFT_MAPPINGS = {
 // Gift configuration functionality
 let currentGiftMappings = { ...DEFAULT_GIFT_MAPPINGS };
 
-function initializeGiftConfiguration() {
-    loadGiftConfiguration();
+async function initializeGiftConfiguration() {
+    await loadGiftConfiguration();
     renderGiftGrid();
     setupGiftConfigurationEvents();
 }
@@ -651,14 +653,15 @@ function setupGiftConfigurationEvents() {
 
 async function saveGiftConfiguration(silent = false) {
     try {
-        localStorage.setItem('giftMappings', JSON.stringify(currentGiftMappings));
-        
-        // Also save to bridge service if available
+        // Save to backend service
         if (window.electronAPI && window.electronAPI.saveGiftMappings) {
             const result = await window.electronAPI.saveGiftMappings(currentGiftMappings);
             if (result && !result.success) {
                 throw new Error(result.error || 'Bridge service failed to save gift mappings');
             }
+        } else {
+            // Fallback to localStorage if backend is not available
+            localStorage.setItem('giftMappings', JSON.stringify(currentGiftMappings));
         }
         
         // Mark as saved and update UI
@@ -705,16 +708,44 @@ function updateUnsavedChangesDisplay() {
     }
 }
 
-function loadGiftConfiguration() {
+async function loadGiftConfiguration() {
     try {
+        // Try to load from backend service first
+        if (window.electronAPI && window.electronAPI.loadGiftMappings) {
+            const result = await window.electronAPI.loadGiftMappings();
+            if (result && result.success && result.mappings) {
+                currentGiftMappings = { ...DEFAULT_GIFT_MAPPINGS, ...result.mappings };
+                addLogEntry({
+                    type: 'info',
+                    message: '📁 Gift configuration loaded from backend',
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Mark as saved since we just loaded from backend
+                markConfigurationAsSaved();
+                return;
+            }
+        }
+        
+        // Fallback to localStorage if backend fails
         const saved = localStorage.getItem('giftMappings');
         if (saved) {
             currentGiftMappings = { ...DEFAULT_GIFT_MAPPINGS, ...JSON.parse(saved) };
             addLogEntry({
                 type: 'info',
-                message: '📁 Gift configuration loaded',
+                message: '📁 Gift configuration loaded from localStorage',
                 timestamp: new Date().toISOString()
             });
+            
+            // Migrate to backend storage
+            if (window.electronAPI && window.electronAPI.saveGiftMappings) {
+                await window.electronAPI.saveGiftMappings(currentGiftMappings);
+                addLogEntry({
+                    type: 'info',
+                    message: '🔄 Gift configuration migrated to backend storage',
+                    timestamp: new Date().toISOString()
+                });
+            }
         } else {
             currentGiftMappings = { ...DEFAULT_GIFT_MAPPINGS };
         }
@@ -725,6 +756,12 @@ function loadGiftConfiguration() {
         console.error('Failed to load gift configuration:', error);
         currentGiftMappings = { ...DEFAULT_GIFT_MAPPINGS };
         markConfigurationAsSaved();
+        
+        addLogEntry({
+            type: 'error',
+            message: `❌ Failed to load gift configuration: ${error.message}`,
+            timestamp: new Date().toISOString()
+        });
     }
 }
 
