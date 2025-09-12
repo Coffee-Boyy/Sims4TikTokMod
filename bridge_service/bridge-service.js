@@ -175,9 +175,7 @@ class TikTokBridgeService {
         this.tiktokConnection.on('like', (data) => {
             const username = data.uniqueId || data.user?.uniqueId || 'unknown';
             const count = data.likeCount || data.count || data.totalLikeCount || 'unknown';
-            
-            this.log(`❤️  ${username} liked (${count} total)`, 'like');
-            
+
             // Forward like events to Sims 4 mod
             this.processLikeEvent(data);
         });
@@ -507,9 +505,7 @@ If you cannot determine an attribute, use reasonable defaults.`;
             // Extract username from data
             const username = data.user?.uniqueId || data.uniqueId || 'unknown';
             const likeCount = data.likeCount || data.count || data.totalLikeCount || 1;
-            
-            this.log(`❤️  Processing like: ${username} liked (${likeCount} total)`, 'like');
-            
+
             // Clean up expired likes first
             this.cleanupExpiredLikeTrackers();
             
