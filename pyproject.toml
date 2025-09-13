@@ -13,8 +13,8 @@ dynamic = ["optional-dependencies"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["Scripts*", "Libraries*", "Utilities*"]
-exclude = ["Release*", "EA*", "custom_scripts_for_decompile*"]
+include = ["Scripts*", "EA*", "Libraries*", "Utilities*"]
+exclude = ["Release*", "custom_scripts_for_decompile*"]
 
 [tool.setuptools.package-dir]
 "" = "."
@@ -44,7 +44,7 @@ profile = "black"
 multi_line_output = 3
 line_length = 120
 known_first_party = ["Scripts", "Libraries", "Utilities"]
-src_paths = ["Scripts", "Libraries/S4CL", "Utilities"]
+src_paths = ["Scripts", "EA/simulation", "EA/core", "EA/base", "Libraries/S4CL", "Utilities"]
 
 [tool.mypy]
 python_version = "3.7"
@@ -66,7 +66,8 @@ mypy_path = "Scripts:Libraries/S4CL:Utilities"
 module = [
     "Scripts.*",
     "Libraries.*",
-    "Utilities.*"
+    "Utilities.*",
+    "EA.*"
 ]
 ignore_missing_imports = false
 

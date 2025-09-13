@@ -16,7 +16,7 @@ from sims4communitylib.utils.sims.common_sim_utils import CommonSimUtils
 from sims4communitylib.utils.sims.common_sim_interaction_utils import CommonSimInteractionUtils
 from sims_tik_tok_mod.modinfo import ModInfo
 from sims_tik_tok_mod.tiktok_bridge_client import get_bridge_client
-from sims_tik_tok_mod.sim_character_creator import SimCharacterCreator
+from sims_tik_tok_mod.utils.cas_utils import TikTokCASUtils
 
 # Create a logger for this module
 log = CommonLogRegistry.get().register_log(ModInfo.get_identity(), 'TikTokActionNotifications')  # type: ignore[attr-defined]
@@ -38,6 +38,8 @@ class TikTokActionNotifications:
         'flirty_compliment': 'Applied flirty buff to all household members!',
         'show_off': 'Active Sim is showing off with confidence!',
         'romantic_hug': 'Active Sim is giving romantic hugs to nearby Sims!',
+        'create_sim': 'Create a Sim for the gifter!',
+        'create_dog_sim': 'Create a Dog Sim for the gifter!',
         'default': 'Thank you for the gift!'
     }
     
@@ -46,9 +48,6 @@ class TikTokActionNotifications:
     def initialize() -> None:
         """Initialize the TikTok gift notification system"""
         log.info("Initializing TikTok gift notifications...")
-        
-        # Initialize the sim character creator
-        SimCharacterCreator.initialize()
         
         # Get the bridge client and set up the callbacks
         bridge_client = get_bridge_client()
@@ -70,6 +69,7 @@ class TikTokActionNotifications:
         """Handle a Sims action event from the TikTok bridge"""
         try:
             user = action_data.get('user', 'Unknown')
+            user_nickname = action_data.get('userNickname', 'Unknown')
             action = action_data.get('action', 'unknown')
             count = action_data.get('count', 1)
             context = action_data.get('context', {})
@@ -81,17 +81,12 @@ class TikTokActionNotifications:
             
             log.info(f"Sims action received: {user} -> {action} (from {gift_name}, x{count})")
             
-            # Handle sim creation action
-            if action == 'create_sim':
-                SimCharacterCreator.process_gift_data(action_data)
-                return
-            
             # Get the action description for notifications
             action_description = TikTokActionNotifications.ACTION_DESCRIPTIONS.get(action, 
                                 TikTokActionNotifications.ACTION_DESCRIPTIONS['default'])
             
             # Create the notification title and description
-            title = f"TikTok Gift from {user}"
+            title = f"TikTok Gift from {user_nickname} ({user})"
             
             # Streamlined description - just the effect
             description = action_description
@@ -107,7 +102,7 @@ class TikTokActionNotifications:
             bridge_client.send_response(action_data, action_description)
             
             # Apply the actual game effect based on the action
-            TikTokActionNotifications._apply_action_effect(action, count, context)
+            TikTokActionNotifications._apply_action_effect(user_nickname, action, count, context)
             
         except Exception as e:
             log.error(f"Error handling Sims action event: {e}")
@@ -167,9 +162,15 @@ class TikTokActionNotifications:
             log.error(f"Error showing connection notification: {e}")
 
     @staticmethod
-    def _apply_action_effect(action: str, count: int, context: Dict[str, Any]) -> None:
+    def _apply_action_effect(user_nickname: str, action: str, count: int, context: Dict[str, Any]) -> None:
         """Apply the actual game effect for a Sims action"""
-        if action == 'flirty_compliment':
+        if action == 'create_sim':
+            TikTokCASUtils.create_sim_and_open_cas(user_nickname)
+
+        elif action == 'create_dog_sim':
+            TikTokCASUtils.create_dog_sim(user_nickname)
+
+        elif action == 'flirty_compliment':
             # Apply flirty buff to all sims in household
             applied_count = 0
             for sim_info in CommonHouseholdUtils.get_sim_info_of_all_sims_in_active_household_generator():

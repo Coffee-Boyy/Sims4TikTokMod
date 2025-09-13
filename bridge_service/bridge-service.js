@@ -138,9 +138,7 @@ class TikTokBridgeService {
         // Connection events
         this.tiktokConnection.on('connected', (state) => {
             const roomId = state?.roomId || state?.roomInfo?.roomId || 'unknown';
-            const viewerCount = state?.roomInfo?.data?.user_count || 'unknown';
             this.log(`✅ Connected to TikTok Live! Room ID: ${roomId}`, 'success');
-            this.log(`👥 ${viewerCount} viewers watching`, 'info');
         });
         
         this.tiktokConnection.on('disconnected', () => {
@@ -238,7 +236,13 @@ class TikTokBridgeService {
         }
         
         // Check rate limits
-        const username = data.user?.uniqueId || 'unknown';
+        let username = data.user?.uniqueId || 'unknown';
+        let userNickname = data.user?.nickname || 'unknown';
+        
+        // Sanitize usernames to remove non-ASCII characters
+        username = username.replace(/[^\x00-\x7F]/g, "");
+        userNickname = userNickname.replace(/[^\x00-\x7F]/g, "");
+        
         if (currentTime - this.lastSentTime < this.minInterval || 
             this.eventsThisMinute >= this.maxEventsPerMinute) {
             this.log(`⏱️  Rate limited: Skipping gift from ${username}`, 'warning');
@@ -259,7 +263,7 @@ class TikTokBridgeService {
         const profilePictureUrl = data.user?.profilePicture?.url?.[0];
 
         // Look up the mapped Sims interaction for this gift
-        const giftKey = giftName.toLowerCase().trim().replace(/ /g, '_');
+        const giftKey = giftName.toLowerCase().trim();
         const simsInteraction = this.giftMappings[giftKey] || this.giftMappings[giftId] || 'none';
         
         // Only send to mod if there's a mapped interaction
@@ -272,6 +276,7 @@ class TikTokBridgeService {
         const payload = {
             type: 'sims_action',
             user: username,
+            userNickname: userNickname,
             action: simsInteraction,
             count: repeatCount,
             // Optional: keep some gift context for logging/debugging
@@ -308,6 +313,7 @@ class TikTokBridgeService {
                         const simCreationPayload = {
                             type: 'sims_action',
                             user: username,
+                            userNickname: userNickname,
                             action: 'create_sim',
                             count: 1,
                             context: {
@@ -533,9 +539,7 @@ If you cannot determine an attribute, use reasonable defaults.`;
             const tracker = this.likeTrackers.get(username);
             tracker.totalLikes += likeCount;
             tracker.lastLikeTime = currentTime;
-            
-            this.log(`💖 User ${username} now has ${tracker.totalLikes} accumulated likes`, 'like');
-            
+
             // Check if we should trigger a reward
             this.checkAndTriggerLikeReward(username, tracker);
             
@@ -678,6 +682,7 @@ If you cannot determine an attribute, use reasonable defaults.`;
     }
 
     async handleManualSpawnCommand(username) {
+        username = username.replace(/[^\x00-\x7F]/g, "");
         this.log(`🎮 Manually triggering sim creation for: ${username}`, 'manual');
         
         try {
@@ -758,8 +763,33 @@ If you cannot determine an attribute, use reasonable defaults.`;
         }
     }
     
+    generateRandomName() {
+        const firstNames = ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank"];
+        const lastNames = ["Smith", "Jones", "Williams", "Brown", "Davis", "Miller"];
+        const adjectives = ["Brave", "Clever", "Swift", "Quiet", "Sparkling", "Mysterious"];
+        const nouns = ["Warrior", "Explorer", "Seeker", "Dreamer", "Guardian", "Traveler"];
+      
+        // Function to get a random element from an array
+        function getRandomElement(arr) {
+          return arr[Math.floor(Math.random() * arr.length)];
+        }
+      
+        const randomFirstName = getRandomElement(firstNames);
+        const randomLastName = getRandomElement(lastNames);
+        const randomAdjective = getRandomElement(adjectives);
+        const randomNoun = getRandomElement(nouns);
+      
+        // You can combine these in various ways
+        const nameOption1 = `${randomFirstName} ${randomLastName}`;
+      
+        // Return one of the options or a combination
+        return nameOption1; // Or nameOption2, nameOption3, or a new combination
+      }
+    
     handleManualGiftCommand(giftData) {
-        const { username, giftName, diamondCount, giftId, tier, icon, simsInteraction, simsInteractionLabel } = giftData;
+        let { username, giftName, diamondCount, giftId, tier, icon, simsInteraction, simsInteractionLabel } = giftData;
+        
+        username = username.replace(/[^\x00-\x7F]/g, "");
         
         this.log(`🎮 Sending manual gift: ${username} sent ${giftName} (${diamondCount} diamonds)`, 'manual');
         
@@ -777,6 +807,7 @@ If you cannot determine an attribute, use reasonable defaults.`;
         const payload = {
             type: 'sims_action',
             user: username,
+            userNickname: this.generateRandomName(),
             action: mappedInteraction,
             count: 1,
             // Optional: keep some gift context for logging/debugging

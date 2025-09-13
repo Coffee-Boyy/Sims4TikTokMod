@@ -12,18 +12,20 @@ class GiftMappings {
         
         // Default gift mappings
         this.defaultMappings = {
-            "rose": "Add §500 to household funds",
-            "heart": "Apply Happy buff for 4 hours", 
-            "gg": "Break random household object",
-            "diamond": "Add §1000 to household funds",
-            "rocket": "Set house on fire",
-            "lion": "Spawn random celebrity",
-            "thumbs up": "Apply Confident buff for 2 hours",
-            "clap": "Apply Inspired buff for 2 hours",
-            "fire": "Set random object on fire",
-            "money": "Add §2000 to household funds",
-            "crown": "Make sim famous",
-            "star": "Apply Celebrity buff for 6 hours"
+            "rose": "romantic_hug",
+            "heart": "blow_kiss",
+            "gg": "excited_introduction",
+            "galaxy": "create_sim",
+            "corgi": "create_dog_sim",
+            "diamond": "give_gift",
+            "rocket": "woohoo",
+            "lion": "passionate_kiss",
+            "thumbs up": "apply_confident_buff",
+            "clap": "apply_inspired_buff",
+            "fire": "set_random_object_on_fire",
+            "money": "add_household_funds",
+            "crown": "make_sim_famous",
+            "star": "apply_celebrity_buff"
         };
         
         this.mappings = { ...this.defaultMappings };

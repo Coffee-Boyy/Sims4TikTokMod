@@ -458,6 +458,8 @@ const TIKTOK_GIFTS = [
 
 const SIMS_INTERACTIONS = [
     { value: 'none', label: 'No Interaction', icon: '🚫' },
+    { value: 'create_sim', label: 'Create a Sim', icon: '🧑‍🎨' },
+    { value: 'create_dog_sim', label: 'Create a Dog Sim', icon: '🐶' },
     { value: 'friendly_hug', label: 'Friendly Hug', icon: '🤗' },
     { value: 'romantic_hug', label: 'Romantic Hug', icon: '💕' },
     { value: 'romantic_kiss', label: 'Romantic Kiss', icon: '💋' },
@@ -512,7 +514,7 @@ const DEFAULT_GIFT_MAPPINGS = {
     'love_you_premium': 'passionate_kiss',
     'sunglasses': 'show_off',
     'sparklers': 'excited_introduction',
-    'corgi': 'playful_poke',
+    'corgi': 'create_dog_sim',
     'boxing_gloves': 'confident_introduction',
     'money_gun': 'show_off',
     'vr_goggles': 'confident_introduction',
@@ -520,7 +522,7 @@ const DEFAULT_GIFT_MAPPINGS = {
     // Luxury Gifts
     'swan': 'romantic_hug',
     'train': 'take_selfie',
-    'galaxy': 'passionate_kiss',
+    'galaxy': 'create_sim',
     'silver_sports_car': 'show_off',
     'fireworks': 'dance_together',
     'chasing_dream': 'excited_introduction',

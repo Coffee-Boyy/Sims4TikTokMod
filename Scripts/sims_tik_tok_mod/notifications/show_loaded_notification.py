@@ -32,10 +32,3 @@ class S4CLSampleModShowLoadedMessage:
         TikTokActionNotifications.initialize()
         
         return True
-        
-    @staticmethod
-    @CommonEventRegistry.handle_events(ModInfo.get_identity().name)
-    def _shutdown_tiktok_bridge(event_data: S4CLZoneEarlyLoadEvent) -> bool:
-        """ Shutdown TikTok bridge when leaving a zone """
-        TikTokActionNotifications.shutdown()
-        return True

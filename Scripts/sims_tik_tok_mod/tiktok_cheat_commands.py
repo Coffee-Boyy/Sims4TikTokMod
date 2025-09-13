@@ -13,6 +13,7 @@ from sims4communitylib.services.commands.common_console_command_output import Co
 
 from sims_tik_tok_mod.modinfo import ModInfo
 from sims_tik_tok_mod.tiktok_bridge_client import get_bridge_client
+from sims_tik_tok_mod.utils.cas_utils import TikTokCASUtils
 
 # Create a logger for this module
 log = CommonLogRegistry.get().register_log(ModInfo.get_identity(), 'TikTokCheatCommands')
@@ -155,3 +156,33 @@ class TikTokCheatCommands:
         except Exception as e:
             output(f"❌ Error stopping bridge client: {e}")
             log.error(f"Stop cheat command error: {e}")
+
+    @staticmethod
+    @CommonConsoleCommand(
+        ModInfo.get_identity(),
+        'tiktok.test_cas',
+        'Test creating a new sim and opening CAS',
+        command_arguments=(
+            CommonConsoleCommandArgument('username', 'str', 'TestUser', is_optional=True),
+        ),
+        show_with_help_command=False
+    )
+    def _tiktok_test_cas_cheat(output: CommonConsoleCommandOutput, username: str = 'TestUser'):
+        """Cheat command to test CAS opening with a new sim"""
+        try:
+            output(f"🎮 Creating new sim for {username} and opening CAS...")
+            log.info(f"Test CAS command: Creating sim for {username}")
+            
+            success = TikTokCASUtils.create_sim_and_open_cas(username)
+            
+            if success:
+                output(f"✅ Successfully created sim and initiated CAS opening for {username}!")
+                output("CAS should open shortly once the sim is fully loaded...")
+                log.info("Test CAS command: Success")
+            else:
+                output("❌ Failed to create sim or open CAS")
+                log.error("Test CAS command: Failed")
+                
+        except Exception as e:
+            output(f"❌ Error during CAS test: {e}")
+            log.error(f"Test CAS cheat command error: {e}")

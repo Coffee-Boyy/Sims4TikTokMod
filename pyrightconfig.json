@@ -5,7 +5,6 @@
   "reportMissingImports": "warning",
   "exclude": [
     "Release",
-    "EA",
     ".venv",
     "build",
     "dist"
@@ -15,6 +14,9 @@
       "root": ".",
       "extraPaths": [
         "Scripts",
+        "EA/simulation",
+        "EA/core",
+        "EA/base",
         "Libraries/S4CL",
         "Utilities"
       ]
