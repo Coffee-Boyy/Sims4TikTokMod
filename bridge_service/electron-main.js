@@ -3,7 +3,8 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import TikTokBridgeService from './bridge-service.js';
 import UserSettings from './user-settings.js';
-import GiftMappings from './gift-mappings.js';
+import GiftMappingsService from './gift-mappings-service.js';
+import { TIKTOK_GIFTS, SIMS_INTERACTIONS } from './gift-mappings.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -82,7 +83,7 @@ app.whenReady().then(async () => {
     await userSettings.loadSettings();
     
     // Initialize gift mappings manager
-    giftMappingsManager = new GiftMappings();
+    giftMappingsManager = new GiftMappingsService();
     await giftMappingsManager.loadMappings();
     
     createWindow();
@@ -278,6 +279,18 @@ ipcMain.handle('load-gift-mappings', async (event) => {
         console.error('Failed to load gift mappings:', error);
         return { success: false, error: error.message };
     }
+});
+
+ipcMain.handle('get-gifts', async () => {
+    return TIKTOK_GIFTS;
+});
+
+ipcMain.handle('get-interactions', async () => {
+    return SIMS_INTERACTIONS;
+});
+
+ipcMain.handle('reset-gift-mappings', async () => {
+    return await giftMappingsManager.resetToDefaults();
 });
 
 ipcMain.handle('send-manual-gift', async (event, giftData) => {

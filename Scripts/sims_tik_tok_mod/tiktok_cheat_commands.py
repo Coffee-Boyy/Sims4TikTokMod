@@ -186,3 +186,34 @@ class TikTokCheatCommands:
         except Exception as e:
             output(f"❌ Error during CAS test: {e}")
             log.error(f"Test CAS cheat command error: {e}")
+
+    @staticmethod
+    @CommonConsoleCommand(
+        ModInfo.get_identity(),
+        'tiktok.test_animal',
+        'Test creating a non-household animal sim that hangs around',
+        command_arguments=(
+            CommonConsoleCommandArgument('pet_name', 'str', 'TestPet Buddy', is_optional=True),
+            CommonConsoleCommandArgument('animal_type', 'str', 'dog', is_optional=True),
+        ),
+        show_with_help_command=False
+    )
+    def _tiktok_test_animal_cheat(output: CommonConsoleCommandOutput, pet_name: str = 'TestPet Buddy', animal_type: str = 'dog'):
+        """Cheat command to test creating a non-household animal sim"""
+        try:
+            output(f"🐕 Creating non-household {animal_type} '{pet_name}' that will hang around...")
+            log.info(f"Test animal command: Creating {animal_type} named {pet_name}")
+            
+            success = TikTokCASUtils.create_non_household_animal_sim(pet_name, animal_type)
+            
+            if success:
+                output(f"✅ Successfully created {animal_type} '{pet_name}' that will hang around the lot!")
+                output("The animal should appear on your lot and behave as if they belong without being in your household.")
+                log.info("Test animal command: Success")
+            else:
+                output(f"❌ Failed to create non-household {animal_type}")
+                log.error("Test animal command: Failed")
+                
+        except Exception as e:
+            output(f"❌ Error during animal creation test: {e}")
+            log.error(f"Test animal cheat command error: {e}")

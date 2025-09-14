@@ -7,6 +7,7 @@ from typing import Dict, Any
 
 from sims4communitylib.enums.buffs_enum import CommonBuffId
 from sims4communitylib.enums.common_currency_modify_reasons import CommonCurrencyModifyReason
+from sims4communitylib.enums.common_species import CommonSpecies
 from sims4communitylib.notifications.common_basic_notification import CommonBasicNotification
 from sims4communitylib.utils.common_log_registry import CommonLogRegistry
 from sims4communitylib.utils.sims.common_buff_utils import CommonBuffUtils
@@ -38,11 +39,12 @@ class TikTokActionNotifications:
         'flirty_compliment': 'Applied flirty buff to all household members!',
         'show_off': 'Active Sim is showing off with confidence!',
         'romantic_hug': 'Active Sim is giving romantic hugs to nearby Sims!',
-        'create_sim': 'Create a Sim for the gifter!',
-        'create_dog_sim': 'Create a Dog Sim for the gifter!',
+        'create_sim': 'Created a Sim for the gifter!',
+        'create_small_dog_sim': 'Created a Small Dog for the gifter!',
+        'create_large_dog_sim': 'Created a Large Dog for the gifter!',
+        'create_cat_sim': 'Created a Cat for the gifter!',
         'default': 'Thank you for the gift!'
     }
-    
     
     @staticmethod
     def initialize() -> None:
@@ -167,8 +169,14 @@ class TikTokActionNotifications:
         if action == 'create_sim':
             TikTokCASUtils.create_sim_and_open_cas(user_nickname)
 
-        elif action == 'create_dog_sim':
-            TikTokCASUtils.create_dog_sim(user_nickname)
+        elif action == 'create_small_dog_sim':
+            TikTokCASUtils.create_non_household_animal_sim(user_nickname, CommonSpecies.SMALL_DOG)
+
+        elif action == 'create_large_dog_sim':
+            TikTokCASUtils.create_non_household_animal_sim(user_nickname, CommonSpecies.LARGE_DOG)
+
+        elif action == 'create_cat_sim':
+            TikTokCASUtils.create_non_household_animal_sim(user_nickname, CommonSpecies.CAT)
 
         elif action == 'flirty_compliment':
             # Apply flirty buff to all sims in household
@@ -187,7 +195,7 @@ class TikTokActionNotifications:
             active_household = CommonHouseholdUtils.get_active_household()
             if active_household:
                 amount = context.get('diamondCount', 10) * 10  # 10 simoleons per diamond
-                active_household.funds.try_add_funds(amount * count)
+                active_household.funds.add(amount * count, CommonCurrencyModifyReason.CHEAT)
                 log.info(f"Added {amount * count} simoleons")
         
         elif action == 'break_object':

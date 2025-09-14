@@ -5,7 +5,7 @@ import axios from 'axios';
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
-import GiftMappings from './gift-mappings.js';
+import GiftMappingsService from './gift-mappings-service.js';
 
 const Appearance = z.object({
     hair_color: z.enum(['blonde', 'brown', 'black', 'red', 'gray', 'white', 'dark_brown', 'light_brown', 'auburn', 'ginger', 'platinum']),
@@ -38,7 +38,7 @@ class TikTokBridgeService {
         this.aiTimeout = config.aiAnalysis?.timeout || 30000;
         
         // Gift mappings for interactions - will be loaded from file
-        this.giftMappingsManager = new GiftMappings();
+        this.giftMappingsManager = new GiftMappingsService();
         this.giftMappings = {};
         this.aiEnabled = config.aiAnalysis?.enabled !== false && !!this.aiApiKey;
         

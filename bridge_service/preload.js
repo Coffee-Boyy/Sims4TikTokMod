@@ -17,6 +17,10 @@ try {
         saveGiftMappings: (mappings) => ipcRenderer.invoke('save-gift-mappings', mappings),
         loadGiftMappings: () => ipcRenderer.invoke('load-gift-mappings'),
         
+        getGifts: () => ipcRenderer.invoke('get-gifts'),
+        getInteractions: () => ipcRenderer.invoke('get-interactions'),
+        resetGiftMappings: () => ipcRenderer.invoke('reset-gift-mappings'),
+        
         // External links
         openExternal: (url) => ipcRenderer.invoke('open-external', url),
         
@@ -37,7 +41,7 @@ try {
         
         removeAllListeners: (channel) => {
             ipcRenderer.removeAllListeners(channel);
-        }
+        },
     });
     
     console.log('Preload script completed successfully - electronAPI exposed to main world');
