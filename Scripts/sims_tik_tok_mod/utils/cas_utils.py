@@ -93,7 +93,7 @@ class TikTokCASUtils:
                 client.set_active_sim(sim_info)
                 log.info(f"Set {sim_info.first_name} as active sim")
             except Exception as e:
-                log.warning(f"Could not set new sim as active: {e}")
+                log.error(f"Could not set new sim as active: {e}")
             
             sims4.commands.client_cheat(
                 f'sims.exit2caswithhouseholdid {sim_info.sim_id} {sim_info.household_id}',
