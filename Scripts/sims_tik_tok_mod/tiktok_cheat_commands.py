@@ -379,15 +379,15 @@ class TikTokCheatCommands:
             output(f"🎭 Attempting direct pose execution: {pose_name}")
             log.info(f"Direct pose command: Executing {pose_name}")
 
-            sim_info = CommonSimUtils.get_active_sim_info()
-            if not sim_info:
+            sim = CommonSimUtils.get_active_sim()
+            if not sim:
                 output("❌ No active sim found")
                 log.error("Direct pose command: No active sim")
                 return
             
             try:
                 output("🔄 Trying interaction push method...")
-                success = TikTokPosePlayerUtils.play_pose_by_name(sim_info, pose_name)
+                success = TikTokPosePlayerUtils.play_pose_by_name(sim, pose_name)
                 if success:
                     output("✅ Interaction push method succeeded")
                 else:

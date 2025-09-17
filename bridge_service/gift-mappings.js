@@ -65,6 +65,7 @@ export const SIMS_INTERACTIONS = [
     { value: 'create_small_dog_sim', label: 'Create a Small Dog', icon: '🐶' },
     { value: 'create_large_dog_sim', label: 'Create a Large Dog', icon: '🐶' },
     { value: 'create_cat_sim', label: 'Create a Cat', icon: '🐱' },
+    { value: 'hand_heart', label: 'Hand Heart', icon: '💖' },
     { value: 'friendly_hug', label: 'Friendly Hug', icon: '🤗' },
     { value: 'romantic_hug', label: 'Romantic Hug', icon: '💕' },
     { value: 'romantic_kiss', label: 'Romantic Kiss', icon: '💋' },
