@@ -1,88 +1,125 @@
-// Default gift mappings - Updated for new gift list
+// Default gift mappings - Enhanced with dopamine-inducing Sims 4 interactions for livestream mod
 export const DEFAULT_GIFT_MAPPINGS = {
-    // Basic Gifts
-    'rose': 'romantic_hug',
-    'music_on_stage': 'dance_together',
-    'gg': 'excited_introduction',
-    'youre_awesome': 'friendly_compliment',
-    'tiktok': 'dance_together',
-    'love_you_so_much': 'flirty_compliment',
-    'ice_cream_cone': 'give_gift',
-    'heart_me': 'blow_kiss',
-    'thumbs_up': 'friendly_compliment',
-    'heart': 'blow_kiss',
-    'cake_slice': 'give_gift',
-    'glow_stick': 'show_off',
-    'love_you': 'flirty_compliment',
-    'team_bracelet': 'friendly_hug',
-    'finger_heart': 'wink',
-    'popcorn': 'tell_joke',
-    'cheer_you_up': 'high_five',
-    'rosa': 'romantic_hug',
+    // BASIC GIFTS (1-10 diamonds) - Simple but heartwarming interactions
+    'rose': 'romantic_hug', // Classic romantic gesture - sim gives a tender hug with rose petals effect
+    'music_on_stage': 'dance_together', // Sim breaks into spontaneous dance with musical notes VFX
+    'gg': 'victory_celebration', // Sim does a victory dance with "GG" text bubble and confetti
+    'youre_awesome': 'friendly_compliment', // Sim gives enthusiastic compliment with sparkle effects
+    'tiktok': 'dance_together', // TikTok dance trend with trending music and effects
+    'love_you_so_much': 'flirty_compliment', // Sim blows kiss with heart emoji bubble and pink sparkles
+    'ice_cream_cone': 'give_gift', // Sim offers ice cream with happy moodlet and cooling VFX
+    'heart_me': 'blow_kiss', // Sim blows kiss with floating hearts and romantic music
+    'thumbs_up': 'friendly_compliment', // Sim gives thumbs up with approval sparkles
+    'heart': 'blow_kiss', // Simple heart gesture with floating heart particles
+    'cake_slice': 'give_gift', // Sim shares cake with birthday party effects and candles
+    'glow_stick': 'show_off', // Sim waves glow stick with neon trail effects and party music
+    'love_you': 'flirty_compliment', // Sweet love declaration with floating hearts
+    'team_bracelet': 'friendly_hug', // Team spirit hug with friendship bracelet VFX
+    'finger_heart': 'wink', // Cute finger heart gesture with sparkle effects
+    'popcorn': 'tell_joke', // Sim tells joke while eating popcorn with laughter bubbles
+    'cheer_you_up': 'high_five', // Encouraging high-five with motivational sparkles
+    'rosa': 'romantic_hug', // Elegant rose-themed romantic embrace with petals
     
-    // Premium Gifts
-    'perfume': 'flirty_compliment',
-    'doughnut': 'give_gift',
-    'paper_crane': 'create_cat_sim',
-    'little_crown': 'confident_introduction',
-    'game_controller': 'playful_poke',
-    'confetti': 'dance_together',
-    'heart_rain': 'romantic_kiss',
-    'love_you_premium': 'passionate_kiss',
-    'sunglasses': 'show_off',
-    'sparklers': 'excited_introduction',
-    'corgi': 'create_small_dog_sim',
-    'boxing_gloves': 'confident_introduction',
-    'money_gun': 'show_off',
-    'vr_goggles': 'confident_introduction',
+    // PREMIUM GIFTS (20-500 diamonds) - More exciting interactions with VFX
+    'perfume': 'flirty_compliment', // Sim applies perfume with scent cloud VFX and flirty wink
+    'doughnut': 'give_gift', // Sim shares donut with sugar sparkles and happy eating animation
+    'paper_crane': 'create_cat_sim', // Magical paper crane transforms into a beautiful cat companion
+    'little_crown': 'royal_introduction', // Sim wears crown and does royal wave with golden sparkles
+    'game_controller': 'gaming_session', // Sim plays video game with controller with gaming VFX
+    'confetti': 'celebration_dance', // Sim does celebration dance with colorful confetti explosion
+    'heart_rain': 'romantic_kiss', // Passionate kiss under falling hearts with romantic lighting
+    'love_you_premium': 'passionate_kiss', // Deep romantic kiss with heart explosion effects
+    'sunglasses': 'cool_pose', // Sim strikes cool pose with sunglasses and attitude sparkles
+    'sparklers': 'firework_show', // Sim waves sparklers with bright trail effects and crackling sounds
+    'corgi': 'create_small_dog_sim', // Adorable corgi appears with wagging tail and happy barks
+    'boxing_gloves': 'power_pose', // Sim does boxing pose with power aura and strength effects
+    'money_gun': 'money_rain', // Sim shoots money gun with cash rain VFX and cha-ching sounds
+    'vr_goggles': 'virtual_reality', // Sim puts on VR goggles with digital world effects
     
-    // Luxury Gifts
-    'swan': 'romantic_hug',
-    'train': 'take_selfie',
-    'galaxy': 'create_sim',
-    'silver_sports_car': 'show_off',
-    'fireworks': 'dance_together',
-    'chasing_dream': 'excited_introduction',
-    'gift_box': 'give_gift',
-    'baby_dragon': 'create_large_dog_sim',
-    'motorcycle': 'confident_introduction',
-    'private_jet': 'woohoo',
+    // LUXURY GIFTS (700-5000 diamonds) - Spectacular interactions with major VFX
+    'swan': 'elegant_dance', // Graceful swan-like dance with water effects and elegance sparkles
+    'train': 'adventure_selfie', // Sim takes epic selfie on train with motion blur and adventure music
+    'galaxy': 'cosmic_transformation', // Sim transforms with galaxy effects, stars, and cosmic energy
+    'silver_sports_car': 'speed_demon', // Sim poses with sports car with speed lines and engine revving
+    'fireworks': 'firework_celebration', // Massive firework display with sim celebrating underneath
+    'chasing_dream': 'dream_sequence', // Sim enters dream-like state with floating elements and ethereal effects
+    'gift_box': 'mystery_gift', // Sim opens giant gift box with surprise explosion and rainbow effects
+    'baby_dragon': 'dragon_companion', // Baby dragon appears with fire breath and magical bonding
+    'motorcycle': 'biker_pose', // Sim strikes biker pose with motorcycle and wind effects
+    'private_jet': 'jet_setter', // Sim boards private jet with luxury travel effects and champagne
     
-    // Exclusive Gifts
-    'sports_car': 'show_off',
-    'luxury_yacht': 'woohoo',
-    'interstellar': 'woohoo',
-    'crystal_heart': 'propose',
-    'tiktok_shuttle': 'woohoo',
-    'phoenix': 'passionate_kiss',
-    'lion': 'passionate_kiss',
-    'tiktok_universe': 'propose'
+    // EXCLUSIVE GIFTS (7000+ diamonds) - Ultimate dopamine-inducing experiences
+    'sports_car': 'supercar_showcase', // Epic supercar reveal with dramatic lighting and crowd cheers
+    'luxury_yacht': 'yacht_party', // Sim hosts yacht party with ocean effects and luxury celebration
+    'interstellar': 'space_journey', // Sim travels through space with cosmic effects and alien encounters
+    'crystal_heart': 'eternal_bond', // Magical crystal heart creates eternal bond with mystical effects
+    'tiktok_shuttle': 'space_mission', // Sim embarks on space mission with rocket effects and zero gravity
+    'phoenix': 'rebirth_ceremony', // Sim undergoes phoenix rebirth with fire and rebirth effects
+    'lion': 'royal_coronation', // Sim becomes royalty with crown ceremony and royal fanfare
+    'tiktok_universe': 'universe_creation', // Sim creates their own universe with cosmic creation effects
 };
 
 export const SIMS_INTERACTIONS = [
+    // Basic Interactions
     { value: 'none', label: 'No Interaction', icon: '🚫' },
+    { value: 'friendly_hug', label: 'Friendly Hug', icon: '🤗' },
+    { value: 'romantic_hug', label: 'Romantic Hug', icon: '💕' },
+    { value: 'friendly_compliment', label: 'Friendly Compliment', icon: '😊' },
+    { value: 'flirty_compliment', label: 'Flirty Compliment', icon: '😘' },
+    { value: 'blow_kiss', label: 'Blow Kiss', icon: '😘' },
+    { value: 'wink', label: 'Wink Playfully', icon: '😉' },
+    { value: 'high_five', label: 'High Five', icon: '🙌' },
+    { value: 'give_gift', label: 'Give Gift', icon: '🎁' },
+    { value: 'tell_joke', label: 'Tell Joke', icon: '😂' },
+    { value: 'dance_together', label: 'Dance Together', icon: '💃' },
+    { value: 'show_off', label: 'Show Off', icon: '✨' },
+    
+    // Enhanced Basic Interactions
+    { value: 'victory_celebration', label: 'Victory Celebration', icon: '🏆' },
+    { value: 'romantic_kiss', label: 'Romantic Kiss', icon: '💋' },
+    { value: 'passionate_kiss', label: 'Passionate Kiss', icon: '😍' },
+    { value: 'royal_introduction', label: 'Royal Introduction', icon: '👑' },
+    { value: 'gaming_session', label: 'Gaming Session', icon: '🎮' },
+    { value: 'celebration_dance', label: 'Celebration Dance', icon: '🎉' },
+    { value: 'cool_pose', label: 'Cool Pose', icon: '😎' },
+    { value: 'firework_show', label: 'Firework Show', icon: '🎆' },
+    { value: 'power_pose', label: 'Power Pose', icon: '💪' },
+    { value: 'money_rain', label: 'Money Rain', icon: '💰' },
+    { value: 'virtual_reality', label: 'Virtual Reality', icon: '🥽' },
+    
+    // Luxury Interactions
+    { value: 'elegant_dance', label: 'Elegant Dance', icon: '🦢' },
+    { value: 'adventure_selfie', label: 'Adventure Selfie', icon: '📸' },
+    { value: 'cosmic_transformation', label: 'Cosmic Transformation', icon: '🌌' },
+    { value: 'speed_demon', label: 'Speed Demon', icon: '🏎️' },
+    { value: 'firework_celebration', label: 'Firework Celebration', icon: '🎇' },
+    { value: 'dream_sequence', label: 'Dream Sequence', icon: '💭' },
+    { value: 'mystery_gift', label: 'Mystery Gift', icon: '🎁' },
+    { value: 'dragon_companion', label: 'Dragon Companion', icon: '🐉' },
+    { value: 'biker_pose', label: 'Biker Pose', icon: '🏍️' },
+    { value: 'jet_setter', label: 'Jet Setter', icon: '✈️' },
+    
+    // Exclusive Interactions
+    { value: 'supercar_showcase', label: 'Supercar Showcase', icon: '🏎️' },
+    { value: 'yacht_party', label: 'Yacht Party', icon: '🛥️' },
+    { value: 'space_journey', label: 'Space Journey', icon: '🚀' },
+    { value: 'eternal_bond', label: 'Eternal Bond', icon: '💎' },
+    { value: 'space_mission', label: 'Space Mission', icon: '🛸' },
+    { value: 'rebirth_ceremony', label: 'Rebirth Ceremony', icon: '🔥' },
+    { value: 'royal_coronation', label: 'Royal Coronation', icon: '👑' },
+    { value: 'universe_creation', label: 'Universe Creation', icon: '🌌' },
+    
+    // Pet Creation Interactions
     { value: 'create_sim', label: 'Create a Sim', icon: '🧑‍🎨' },
     { value: 'create_small_dog_sim', label: 'Create a Small Dog', icon: '🐶' },
     { value: 'create_large_dog_sim', label: 'Create a Large Dog', icon: '🐶' },
     { value: 'create_cat_sim', label: 'Create a Cat', icon: '🐱' },
-    { value: 'hand_heart', label: 'Hand Heart', icon: '💖' },
-    { value: 'friendly_hug', label: 'Friendly Hug', icon: '🤗' },
-    { value: 'romantic_hug', label: 'Romantic Hug', icon: '💕' },
-    { value: 'romantic_kiss', label: 'Romantic Kiss', icon: '💋' },
-    { value: 'flirty_compliment', label: 'Flirty Compliment', icon: '😘' },
-    { value: 'friendly_compliment', label: 'Friendly Compliment', icon: '😊' },
-    { value: 'tell_joke', label: 'Tell Joke', icon: '😂' },
+    
+    // Special Interactions
+    { value: 'take_selfie', label: 'Take Selfie Together', icon: '📸' },
     { value: 'playful_poke', label: 'Playful Poke', icon: '👉' },
     { value: 'excited_introduction', label: 'Excited Introduction', icon: '🤩' },
-    { value: 'dance_together', label: 'Dance Together', icon: '💃' },
-    { value: 'take_selfie', label: 'Take Selfie Together', icon: '📸' },
-    { value: 'give_gift', label: 'Give Gift', icon: '🎁' },
-    { value: 'blow_kiss', label: 'Blow Kiss', icon: '😘' },
-    { value: 'wink', label: 'Wink Playfully', icon: '😉' },
-    { value: 'high_five', label: 'High Five', icon: '🙌' },
-    { value: 'show_off', label: 'Show Off', icon: '✨' },
     { value: 'confident_introduction', label: 'Confident Introduction', icon: '😎' },
-    { value: 'passionate_kiss', label: 'Passionate Kiss', icon: '😍' },
     { value: 'woohoo', label: 'WooHoo', icon: '🔥' },
     { value: 'propose', label: 'Propose Marriage', icon: '💍' }
 ];

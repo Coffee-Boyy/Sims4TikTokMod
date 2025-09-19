@@ -48,4 +48,6 @@ Tunings/Temp
 
 node_modules/
 
+bridge_service/dist/
+
 config.json

@@ -242,7 +242,6 @@ body {
     color: var(--text-primary);
 }
 
-
 input[type="text"],
 input[type="number"],
 select {
@@ -382,7 +381,6 @@ select:focus {
     font-size: 12px;
 }
 
-
 .button-group {
     display: flex;
     gap: 15px;
@@ -436,34 +434,7 @@ select:focus {
     color: var(--status-error);
 }
 
-/* Manual Commands */
-.command-section {
-    margin-bottom: 20px;
-    padding: 16px;
-    background: var(--bg-tertiary);
-    border-radius: 6px;
-    border-left: 3px solid var(--button-primary);
-}
-
-.command-section h3 {
-    color: var(--text-primary);
-    margin-bottom: 15px;
-    font-size: 1.1rem;
-}
-
-.command-section:last-child {
-    margin-bottom: 0;
-}
-
 /* Log */
-/* Log controls styling moved to panel-header-with-controls */
-
-.log-header .panel-title {
-    margin-bottom: 0;
-    padding-bottom: 0;
-    border-bottom: none;
-}
-
 .log-controls {
     display: flex;
     align-items: center;
@@ -620,10 +591,6 @@ select:focus {
 
 .log-container::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);
-}
-
-#manual-commands-panel {
-    grid-column: 1 / -1; /* Span all columns */
 }
 
 #gift-config-panel {
@@ -853,6 +820,71 @@ select:focus {
     margin: 0 auto;
     font-size: 12px;
     color: var(--text-secondary);
+}
+
+/* Search functionality */
+.search-container {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 40px 10px 12px;
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--input-focus);
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+.search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 3px;
+    font-size: 14px;
+    line-height: 1;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.search-clear:hover {
+    background: var(--border-color);
+    color: var(--text-primary);
+}
+
+.search-results-info {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-style: italic;
 }
 
 /* Gift actions and test button styling */

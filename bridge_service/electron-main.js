@@ -31,7 +31,12 @@ function createWindow() {
         show: false
     });
 
-    mainWindow.loadFile('renderer.html');
+    // Load the React-built renderer
+    if (process.env.NODE_ENV === 'development') {
+        mainWindow.loadFile('dist/renderer.html');
+    } else {
+        mainWindow.loadFile('dist/renderer.html');
+    }
 
     mainWindow.once('ready-to-show', () => {
         mainWindow.show();

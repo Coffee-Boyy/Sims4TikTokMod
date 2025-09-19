@@ -132,10 +132,6 @@ class TikTokBridgeService {
         });
         
         this.tiktokConnection.on('like', (data) => {
-            const username = data.uniqueId || data.user?.uniqueId || 'unknown';
-            const count = data.likeCount || data.count || data.totalLikeCount || 'unknown';
-
-            // Forward like events to Sims 4 mod
             this.processLikeEvent(data);
         });
         
