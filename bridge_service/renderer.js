@@ -76,6 +76,25 @@ function setupEventListeners() {
         elements.themeToggle.addEventListener('click', toggleTheme);
     }
     
+    // Current user link opens livestream
+    if (elements.currentUser) {
+        elements.currentUser.addEventListener('click', (e) => {
+            const username = elements.currentUser.dataset?.username;
+            if (!username) {
+                e.preventDefault();
+                return;
+            }
+            e.preventDefault();
+            const clean = username.replace(/^@/, '');
+            const url = `https://www.tiktok.com/@${encodeURIComponent(clean)}/live`;
+            if (window.electronAPI && window.electronAPI.openExternal) {
+                window.electronAPI.openExternal(url);
+            } else {
+                window.open(url, '_blank');
+            }
+        });
+    }
+    
     // Listen for log messages from main process
     window.electronAPI.onLogMessage((logMessage) => {
         addLogEntry(logMessage);
@@ -129,7 +148,7 @@ async function startBridge() {
             elements.stopBtn.disabled = false;
             
             // Update status display
-            elements.currentUser.textContent = username || 'Manual Mode';
+            updateCurrentUserDisplay(username || 'Manual Mode');
             
             addLogEntry({
                 type: 'success',
@@ -174,7 +193,7 @@ async function stopBridge() {
             elements.stopBtn.style.display = 'none';
             
             // Reset status display
-            elements.currentUser.textContent = 'None';
+            updateCurrentUserDisplay(null);
             
             addLogEntry({
                 type: 'success',
@@ -376,6 +395,28 @@ function startStatusPolling() {
 function showSuccess(message) {
     // You could implement a toast notification system here
     console.log('SUCCESS:', message);
+}
+
+// Helper to update the Current User link text and target
+function updateCurrentUserDisplay(username) {
+    const link = elements.currentUser;
+    if (!link) return;
+    
+    const value = (username || '').trim();
+    if (value && value.toLowerCase() !== 'manual mode') {
+        const clean = value.replace(/^@/, '');
+        link.textContent = clean;
+        link.dataset.username = clean;
+        link.title = `Open @${clean}'s TikTok LIVE`;
+    } else if (value && value.toLowerCase() === 'manual mode') {
+        link.textContent = 'Manual Mode';
+        link.removeAttribute('title');
+        delete link.dataset.username;
+    } else {
+        link.textContent = 'None';
+        link.removeAttribute('title');
+        delete link.dataset.username;
+    }
 }
 
 function showInfo(message) {

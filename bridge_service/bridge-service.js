@@ -1,21 +1,7 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import { TikTokLiveConnection } from 'tiktok-live-connector';
-import config from './config.json' with { type: 'json' };
-import axios from 'axios';
-import OpenAI from "openai";
-import { zodTextFormat } from "openai/helpers/zod";
-import { z } from "zod";
+import config from './config.json' assert { type: 'json' };
 import GiftMappingsService from './gift-mappings-service.js';
-
-const Appearance = z.object({
-    hair_color: z.enum(['blonde', 'brown', 'black', 'red', 'gray', 'white', 'dark_brown', 'light_brown', 'auburn', 'ginger', 'platinum']),
-    skin_tone: z.string(),
-    eye_color: z.enum(['blue', 'brown', 'green', 'hazel', 'gray']),
-    gender: z.enum(['male', 'female']),
-    age: z.enum(['young_adult', 'adult', 'elder']),
-    hair_style: z.enum(['short', 'medium', 'long', 'bald']),
-    confidence: z.number().min(0).max(1),
-});
 
 class TikTokBridgeService {
     constructor(tiktokUsername, websocketPort = 8765, manualMode = false, logCallback = null) {
@@ -31,39 +17,15 @@ class TikTokBridgeService {
         this.maxEventsPerMinute = 10;
         this.eventsThisMinute = 0;
         this.minuteStartTime = Date.now();
-        
-        // AI Analysis configuration
-        this.aiApiKey = config.aiAnalysis?.openaiApiKey;
-        this.aiModel = config.aiAnalysis?.model || 'gpt-5-mini';
-        this.aiTimeout = config.aiAnalysis?.timeout || 30000;
-        
+
         // Gift mappings for interactions - will be loaded from file
         this.giftMappingsManager = new GiftMappingsService();
         this.giftMappings = {};
-        this.aiEnabled = config.aiAnalysis?.enabled !== false && !!this.aiApiKey;
-        
-        if (this.aiEnabled) {
-            this.openai = new OpenAI({
-                apiKey: this.aiApiKey,
-                timeout: this.aiTimeout
-            });
-        }
-        
-        // Diamond tracking configuration
-        this.diamondThreshold = config.diamondTracking?.threshold || 5;
-        this.diamondTimeout = config.diamondTracking?.timeout || 3600; // 1 hour
-        this.diamondTrackers = new Map(); // Track diamond accumulation per user
-        
+
         // Like tracking configuration
         this.likesThreshold = config.likeTracking?.threshold || 100; // Number of likes needed to trigger simoleon reward
         this.likesTimeout = config.likeTracking?.timeout || 60; // Time in seconds before accumulated likes expire
         this.likeTrackers = new Map(); // Track like accumulation per user
-        
-        // Profile picture configuration
-        this.profilePicturesEnabled = config.profilePictures?.enabled !== false;
-        this.useWebScraping = config.profilePictures?.useWebScraping !== false;
-        this.useTikTokLiveConnector = config.profilePictures?.useTikTokLiveConnector !== false;
-        this.fallbackToGenerated = config.profilePictures?.fallbackToGenerated !== false;
         
         if (!manualMode) {
             // Initialize TikTok connection only in normal mode
@@ -84,8 +46,6 @@ class TikTokBridgeService {
             this.setupTikTokEvents();
         }
         
-        // Start cleanup interval for expired diamond trackers and like trackers
-        this.startDiamondTrackerCleanup();
         this.startLikeTrackerCleanup();
     }
     
@@ -165,9 +125,10 @@ class TikTokBridgeService {
         
         // Optional: Log other events for debugging
         this.tiktokConnection.on('chat', (data) => {
-            const username = data.uniqueId || data.user?.uniqueId || 'unknown';
+            const username = data.user?.uniqueId || 'unknown';
+            const nickname = data.user?.nickname || 'unknown';
             const message = data.comment || data.message || 'no message';
-            this.log(`💬 ${username}: ${message}`, 'chat');
+            this.log(`💬 ${nickname} (${username}): ${message}`, 'chat');
         });
         
         this.tiktokConnection.on('like', (data) => {
@@ -179,7 +140,7 @@ class TikTokBridgeService {
         });
         
         this.tiktokConnection.on('follow', (data) => {
-            const username = data.uniqueId || data.user?.uniqueId || 'unknown';
+            const username = data.user?.uniqueId || 'unknown';
             this.log(`➕ ${username} followed!`, 'follow');
         });
     }
@@ -289,213 +250,7 @@ class TikTokBridgeService {
             timestamp: new Date().toISOString()
         };
         
-        // Process diamond tracking and sim creation
-        if (diamondCount > 0) {
-            this.processDiamondTracking(username, diamondCount, profilePictureUrl)
-                .then(result => {
-                    let shouldCreateSim = false;
-                    if (result) {
-                        shouldCreateSim = result.shouldCreateSim || false;
-                        this.log(`💎 Diamond tracking for ${username}: ${JSON.stringify(result)}`, 'diamond');
-                    }
-                    
-                    // If this gift has diamonds and a profile picture, analyze the appearance
-                    if (shouldCreateSim && profilePictureUrl && this.aiEnabled) {
-                        return this.analyzeUserAppearance(username, profilePictureUrl).then(appearanceData => {
-                            return { shouldCreateSim, diamondTracking: result, appearanceAnalysis: appearanceData };
-                        });
-                    }
-                    return { shouldCreateSim, diamondTracking: result, appearanceAnalysis: null };
-                })
-                .then(processedData => {
-                    // Send sim creation action if needed
-                    if (processedData.shouldCreateSim) {
-                        const simCreationPayload = {
-                            type: 'sims_action',
-                            user: username,
-                            userNickname: userNickname,
-                            action: 'create_sim',
-                            count: 1,
-                            context: {
-                                giftName: giftName,
-                                giftId: giftId,
-                                diamondCount: diamondCount,
-                                profilePictureUrl: profilePictureUrl,
-                                diamondTracking: processedData.diamondTracking,
-                                appearanceAnalysis: processedData.appearanceAnalysis
-                            },
-                            timestamp: new Date().toISOString()
-                        };
-                        this.broadcastToClients(simCreationPayload);
-                        this.log(`📤 Sim creation action sent: ${username} -> create_sim`, 'gift');
-                    } else {
-                        // Send the gift action
-                        this.broadcastToClients(payload);
-                        this.log(`📤 Sims action sent: ${username} -> ${simsInteraction} (from ${giftName}, ${diamondCount} 💎)`, 'gift');
-                    }
-                })
-                .catch(error => {
-                    this.log(`❌ Error processing gift for ${username}: ${this.formatError(error)}`, 'error');
-                    // Still send the gift action even if diamond tracking fails
-                    this.broadcastToClients(payload);
-                    this.log(`📤 Sims action sent: ${username} -> ${simsInteraction} (from ${giftName}, ${diamondCount} 💎)`, 'gift');
-                });
-        }
-    }
-    
-    async processDiamondTracking(username, diamondCount, profilePictureUrl) {
-        try {
-            const currentTime = Date.now() / 1000; // Convert to seconds
-            
-            // Initialize or update tracker for this user
-            if (!this.diamondTrackers.has(username)) {
-                this.diamondTrackers.set(username, {
-                    totalDiamonds: 0,
-                    firstGiftTime: currentTime,
-                    lastGiftTime: currentTime,
-                    profilePictureUrl: profilePictureUrl,
-                    simCreated: false
-                });
-            }
-            
-            const tracker = this.diamondTrackers.get(username);
-            tracker.totalDiamonds += diamondCount;
-            tracker.lastGiftTime = currentTime;
-            
-            // Update profile picture URL if provided
-            if (profilePictureUrl) {
-                tracker.profilePictureUrl = profilePictureUrl;
-            }
-            
-            this.log(`💎 User ${username} now has ${tracker.totalDiamonds} accumulated diamonds`, 'diamond');
-            
-            // Check if threshold reached
-            if (tracker.totalDiamonds >= this.diamondThreshold && !tracker.simCreated) {
-                tracker.simCreated = true;
-                this.log(`🎉 Diamond threshold reached for ${username}! Triggering sim creation...`, 'success');
-                
-                return {
-                    totalDiamonds: tracker.totalDiamonds,
-                    thresholdReached: true,
-                    shouldCreateSim: true,
-                    timeRemaining: this.diamondTimeout - (currentTime - tracker.firstGiftTime)
-                };
-            }
-            
-            // Return current status
-            return {
-                totalDiamonds: tracker.totalDiamonds,
-                thresholdReached: false,
-                shouldCreateSim: false,
-                timeRemaining: this.diamondTimeout - (currentTime - tracker.firstGiftTime)
-            };
-            
-        } catch (error) {
-            this.log(`❌ Error processing diamond tracking for ${username}: ${this.formatError(error)}`, 'error');
-            return null;
-        }
-    }
-    
-    getProfilePictureUrl(username) {
-        return "https://p19-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/96342a004e5b15067605aeb18c70faf1~tplv-tiktokx-cropcenter:1080:1080.jpeg?dr=9640&refresh_token=6f355dd4&x-expires=1757368800&x-signature=EdaetmYBWIdwSWQiZRx9SKYY43I%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5";
-    }
-    
-    async analyzeUserAppearance(username, profilePictureUrl) {
-        try {
-            this.log(`🎨 Starting appearance analysis for ${username}...`, 'ai');
-            
-            // Get profile picture URL
-            if (!profilePictureUrl) {
-                this.log(`⚠️ No profile picture available for ${username}, using defaults`, 'warning');
-                return this.getDefaultAppearance();
-            }
-            
-            // Analyze the profile picture
-            const appearanceData = await this.analyzeProfilePicture(profilePictureUrl, username);
-            if (!appearanceData) {
-                this.log(`⚠️ AI analysis failed for ${username}, using defaults`, 'warning');
-                return this.getDefaultAppearance();
-            }
-            
-            return appearanceData;
-            
-        } catch (error) {
-            this.log(`❌ Error in appearance analysis for ${username}: ${this.formatError(error)}`, 'error');
-            return this.getDefaultAppearance();
-        }
-    }
-    
-    getDefaultAppearance() {
-        return {
-            hair_color: 'brown',
-            skin_tone: 'medium',
-            eye_color: 'brown',
-            gender: 'male',
-            age: 'adult',
-            hair_style: 'short',
-            confidence: 0.0
-        };
-    }
-
-    async analyzeProfilePicture(profilePictureUrl, username) {
-        try {
-            this.log(`🔍 Analyzing profile picture for ${username}...`, 'ai');
-            
-            if (!this.openai) {
-                this.log(`⚠️ OpenAI client not initialized for ${username}`, 'warning');
-                return null;
-            }
-            
-            // Download the profile picture
-            const imageResponse = await axios.get(profilePictureUrl, {
-                responseType: 'arraybuffer',
-                timeout: 10000
-            });
-            
-            // Convert to base64
-            const imageBase64 = Buffer.from(imageResponse.data).toString('base64');
-            
-            // Prepare the AI prompt
-            const prompt = `Analyze this profile picture and determine the person's appearance attributes for creating a Sims 4 character.
-
-Please respond with a JSON object containing the following attributes:
-{
-    "hair_color": "blonde|brown|light_brown|dark_brown|black|red|auburn|ginger|platinum|gray|white",
-    "skin_tone": "very_light|light|fair|medium|tan|olive|brown|dark|very_dark", 
-    "eye_color": "blue|brown|green|hazel|gray",
-    "gender": "male|female",
-    "age": "young_adult|adult|elder",
-    "hair_style": "short|medium|long|bald",
-    "confidence": 0.0-1.0
-}
-
-If you cannot determine an attribute, use reasonable defaults.`;
-            
-            // Call OpenAI API using the new Responses API
-            const response = await this.openai.responses.parse({
-                model: this.aiModel,
-                input: [
-                    {
-                        role: 'user',
-                        content: [
-                            { type: 'input_text', text: prompt },
-                            {
-                                type: 'input_image',
-                                image_url: `data:image/jpeg;base64,${imageBase64}`
-                            }
-                        ]
-                    }
-                ],
-                text: {
-                    format: zodTextFormat(Appearance, "appearance"),
-                },
-            });
-            const content = response.output_parsed;
-            return content;
-        } catch (error) {
-            this.log(`❌ Error analyzing profile picture for ${username}: ${this.formatError(error)}`, 'error');
-            return null;
-        }
+        this.broadcastToClients(payload);
     }
     
     processLikeEvent(data) {
@@ -510,7 +265,7 @@ If you cannot determine an attribute, use reasonable defaults.`;
             
             // Extract username from data
             const username = data.user?.uniqueId || data.uniqueId || 'unknown';
-            const likeCount = data.likeCount || data.count || data.totalLikeCount || 1;
+            const likeCount = data.likeCount || data.count || 1;
 
             // Clean up expired likes first
             this.cleanupExpiredLikeTrackers();
@@ -681,113 +436,23 @@ If you cannot determine an attribute, use reasonable defaults.`;
         this.log('🎮 Ready to receive connections from Sims 4 mod!', 'info');
     }
 
-    async handleManualSpawnCommand(username) {
-        username = username.replace(/[^\x00-\x7F]/g, "");
-        this.log(`🎮 Manually triggering sim creation for: ${username}`, 'manual');
-        
-        try {
-            // Create a fake diamond tracking result that triggers sim creation
-            const fakeDiamondTracking = {
-                totalDiamonds: this.diamondThreshold,
-                thresholdReached: true,
-                shouldCreateSim: true,
-                timeRemaining: 3600
-            };
-            
-            // Get real profile picture and analyze appearance with AI
-            let appearanceAnalysis;
-            let profilePictureUrl;
-            
-            if (this.aiEnabled) {
-                this.log(`🤖 AI enabled - analyzing appearance for ${username}...`, 'ai');
-                profilePictureUrl = this.getProfilePictureUrl(username);
-                appearanceAnalysis = await this.analyzeUserAppearance(username, profilePictureUrl);
-            } else {
-                this.log(`⚠️ AI disabled - using default appearance for ${username}`, 'warning');
-                profilePictureUrl = 'https://via.placeholder.com/150/4ECDC4/FFFFFF?text=Test';
-                appearanceAnalysis = this.getDefaultAppearance();
-            }
-            
-            // Create the sim creation action data structure
-            const simCreationData = {
-                type: 'sims_action',
-                user: `${username}_${Math.random().toString(36).substring(2, 15)}`,
-                action: 'create_sim',
-                count: 1,
-                context: {
-                    giftName: 'Diamond',
-                    giftId: 99999,
-                    diamondCount: this.diamondThreshold,
-                    profilePictureUrl: profilePictureUrl,
-                    diamondTracking: fakeDiamondTracking,
-                    appearanceAnalysis: appearanceAnalysis,
-                    isManual: true
-                },
-                timestamp: new Date().toISOString()
-            };
-            
-            // Send the event to connected clients
-            this.log(`📤 Sending sim creation action for ${username}`, 'manual');
-            this.broadcastToClients(simCreationData);
-            
-            this.log(`✅ Sim creation event sent for ${username}`, 'success');
-            
-        } catch (error) {
-            this.log(`❌ Error in manual spawn command for ${username}: ${this.formatError(error)}`, 'error');
-            
-            // Fallback: send with default appearance
-            const fallbackData = {
-                type: 'sims_action',
-                user: username,
-                action: 'create_sim',
-                count: 1,
-                context: {
-                    giftName: 'Diamond',
-                    giftId: 99999,
-                    diamondCount: this.diamondThreshold,
-                    profilePictureUrl: 'https://via.placeholder.com/150/4ECDC4/FFFFFF?text=Test',
-                    diamondTracking: {
-                        totalDiamonds: this.diamondThreshold,
-                        thresholdReached: true,
-                        shouldCreateSim: true,
-                        timeRemaining: 3600
-                    },
-                    appearanceAnalysis: this.getDefaultAppearance(),
-                    isManual: true
-                },
-                timestamp: new Date().toISOString()
-            };
-            
-            this.broadcastToClients(fallbackData);
-            this.log(`✅ Fallback sim creation action sent for ${username}`, 'success');
-        }
-    }
-    
     generateRandomName() {
         const firstNames = ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank"];
         const lastNames = ["Smith", "Jones", "Williams", "Brown", "Davis", "Miller"];
-        const adjectives = ["Brave", "Clever", "Swift", "Quiet", "Sparkling", "Mysterious"];
-        const nouns = ["Warrior", "Explorer", "Seeker", "Dreamer", "Guardian", "Traveler"];
-      
-        // Function to get a random element from an array
+
         function getRandomElement(arr) {
           return arr[Math.floor(Math.random() * arr.length)];
         }
       
         const randomFirstName = getRandomElement(firstNames);
         const randomLastName = getRandomElement(lastNames);
-        const randomAdjective = getRandomElement(adjectives);
-        const randomNoun = getRandomElement(nouns);
-      
-        // You can combine these in various ways
         const nameOption1 = `${randomFirstName} ${randomLastName}`;
       
-        // Return one of the options or a combination
-        return nameOption1; // Or nameOption2, nameOption3, or a new combination
-      }
+        return nameOption1;
+    }
     
     handleManualGiftCommand(giftData) {
-        let { username, giftName, diamondCount, giftId, tier, icon, simsInteraction, simsInteractionLabel } = giftData;
+        let { username, giftName, diamondCount, giftId, tier, icon, simsInteraction } = giftData;
         
         username = username.replace(/[^\x00-\x7F]/g, "");
         
@@ -853,44 +518,11 @@ If you cannot determine an attribute, use reasonable defaults.`;
         }
     }
 
-    startDiamondTrackerCleanup() {
-        // Clean up expired diamond trackers every 5 minutes
-        setInterval(() => {
-            this.cleanupExpiredDiamondTrackers();
-        }, 5 * 60 * 1000); // 5 minutes
-    }
-    
     startLikeTrackerCleanup() {
         // Clean up expired like trackers every minute
         setInterval(() => {
             this.cleanupExpiredLikeTrackers();
         }, 60 * 1000); // 1 minute
-    }
-    
-    cleanupExpiredDiamondTrackers() {
-        try {
-            const currentTime = Date.now() / 1000;
-            const expiredUsers = [];
-            
-            for (const [username, tracker] of this.diamondTrackers.entries()) {
-                const timeSinceFirst = currentTime - tracker.firstGiftTime;
-                if (timeSinceFirst >= this.diamondTimeout && !tracker.simCreated) {
-                    expiredUsers.push(username);
-                }
-            }
-            
-            // Remove expired trackers
-            for (const username of expiredUsers) {
-                this.diamondTrackers.delete(username);
-            }
-            
-            if (expiredUsers.length > 0) {
-                this.log(`🧹 Cleaned up ${expiredUsers.length} expired diamond trackers`, 'info');
-            }
-            
-        } catch (error) {
-            this.log(`❌ Error cleaning up expired diamond trackers: ${this.formatError(error)}`, 'error');
-        }
     }
     
     cleanupExpiredLikeTrackers() {

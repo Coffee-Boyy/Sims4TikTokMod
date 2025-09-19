@@ -102,7 +102,7 @@ class TikTokEffectMappings:
                 return
 
             TikTokVFXUtils.play_one_shot_on_sim('ep1_givebirth_alien', joint_name='b__Root__')
-            TikTokPosePlayerUtils.play_pose_by_name(sim, 'flowurtheweirdo:PosePack_202302100125254978_set_1')
+            TikTokPosePlayerUtils.play_pose_by_name(sim, 'flowurtheweirdo:PosePack_202302100125254978_set_1', pose_duration=1.4)
         except Exception as e:
             log.error(f"Error applying hand heart action: {e}")
 
